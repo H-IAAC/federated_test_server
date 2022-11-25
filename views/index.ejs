@@ -1,0 +1,132 @@
+<html>
+
+<head>
+    <title>H-IAAC - Federated Test</title>
+    <link href="https://fonts.googleapis.com/css?family=Lato:100" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+</head>
+
+<body>
+
+    <h1>H-IAAC - Federated Test</h1>
+
+    <h2>Setup</h2>
+    <div class="setup">
+        <form action="/setConfig" method="POST">
+            <label for="fold">Fold:</label>
+            <select onchange="onFoldChanged()" name="fold" id="fold">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+        </form>
+    </div>
+
+    <h2> Devices </h2>
+    <div class="devices">
+        <form action="/reset" method="POST">
+            <button type="submit" id="newtestBtn" hidden>NEW TEST</button>
+        </form>
+        <table id="table">
+            <tr>
+                <th>Fold</th>
+                <th>Client</th>
+                <th>Device Info</th>
+                <th>Status</th>
+            </tr>
+            <% for( var i=0; i < devices.length; i++){ %>
+                <tr>
+                    <td>
+                        <%= devices[i][0] %>
+                    </td>
+                    <td>
+                        <%= devices[i][1] %>
+                    </td>
+                    <td>
+                        <%= devices[i][2] %>
+                    </td>
+                    <td>
+                        <%= devices[i][3] %>
+                    </td>
+                </tr>
+                <% } %>
+        </table>
+    </div>
+</body>
+
+<script type="text/javascript">
+    // Get the initial value for 'fold' (defined on index.js)
+    var fold = <%= fold %>;
+    document.getElementById("fold").value = fold;
+
+    // When a new Fold value is selected
+    function onFoldChanged() {
+        var x = document.getElementById("fold").value;
+        post('/setConfig/', { fold: x });
+    }
+
+    // Post a request
+    function post(path, params, method = 'post') {
+
+        // The rest of this code assumes you are not using a library.
+        // It can be made less verbose if you use one.
+        const form = document.createElement('form');
+        form.method = method;
+        form.action = path;
+
+        for (const key in params) {
+            if (params.hasOwnProperty(key)) {
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = key;
+                hiddenField.value = params[key];
+
+                form.appendChild(hiddenField);
+            }
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    var interval = 3000;
+    function doAjax() {
+        $.ajax({
+            type: 'GET',
+            url: '/getDevices',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function (data) {
+                var table = document.getElementById("table");
+
+                for (var i = table.rows.length; i > 1; i = table.rows.length) {
+                    table.deleteRow(i - 1);
+                }
+
+                for (var i = 0; i < data.devices.length; i++) {
+                    var row = table.insertRow(table.rows.length);
+                    row.insertCell(0).innerHTML = data.devices[i][0];
+                    row.insertCell(1).innerHTML = data.devices[i][1];
+                    row.insertCell(2).innerHTML = data.devices[i][2];
+                    row.insertCell(3).innerHTML = data.devices[i][3];
+                }
+
+                if (table.rows.length > 1)
+                    $("#newtestBtn").show();
+                else
+                    $("#newtestBtn").hide();
+            },
+            complete: function (data) {
+                // Schedule the next
+                setTimeout(doAjax, interval);
+            }
+        });
+    }
+    setTimeout(doAjax, interval);
+
+</script>
+
+</html>
