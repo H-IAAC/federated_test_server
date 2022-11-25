@@ -136,16 +136,12 @@ app.post("/upload", function (req, res) {
         // Files must be stored on 'uploads' directory
         var newPath = path.join(__dirname, 'uploads') + path.sep + files.file.originalFilename;
 
-        console.log("oldPath: " + oldPath);
-        console.log("newPath: " + newPath);
-
         // Get file content on tmp dir.
         var rawData = fs.readFileSync(oldPath)
 
         writeFile(newPath, rawData).then(() => {
             fs.unlink(oldPath, function (err) {
                 if (err) console.log(err)
-                console.log(oldPath + " deleted")
             })
         });
     });
