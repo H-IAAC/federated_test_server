@@ -13,3 +13,6 @@
 <li>node v18.12.1</li>
 <li>npm v8.19.2</li>
 </ol>
+
+![Diagram](docs/diagram.drawio.png)
+<a href="https://app.diagrams.net/#HH-IAAC%2Ffederated_test_server%2Fdev%2Fdocs/diagram.drawio.png" target="_blank">Edit in diagrams.net</a>
