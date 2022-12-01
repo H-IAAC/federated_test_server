@@ -125,29 +125,60 @@ app.post("/setDeviceStatus", function (req, res) {
 
 app.post("/upload", function (req, res) {
 
+    var ret = { status: "" };
     const form = new formidable.IncomingForm();
 
-    form.parse(req, function (err, fields, files) {
+    // Parse form content
+    form.parse(req, async function (err, fields, files) {
+
+        //console.log("-> " + fields.directory);
+        //console.log("-> " + fields.ignore);
 
         // Uploads are sent to operating systems tmp dir by default,
         // need to copy correct destination.
         var oldPath = files.file.filepath;
 
-        // Files must be stored on 'uploads' directory
-        var newPath = path.join(__dirname, 'uploads') + path.sep + files.file.originalFilename;
+        // Checks if need to create a new directory
+        var newPath;
+        if (fields.directory) {
+            // Files must be stored on directory inside 'uploads' directory
+            newPath = path.join(__dirname, 'uploads') + path.sep + fields.directory;
+        } else {
+            // Files must be stored on 'uploads' directory
+            newPath = path.join(__dirname, 'uploads');
+        }
+
+        // Create the directory when files will be stored
+        fs.mkdir(newPath, { recursive: true }, (err) => {
+        });
+
+        // Append file name to the path
+        newPath = newPath + path.sep + files.file.originalFilename;
+
+        if (fields.ignore && fields.ignore !== "false") {
+            if (fs.existsSync(newPath)) {
+                console.log(getDateTime() + " Ignoring file " + newPath + " as it already exists");
+                res.json({ status: "success" });
+                return;
+            }
+        }
 
         // Get file content on tmp dir.
         var rawData = fs.readFileSync(oldPath)
 
-        writeFile(newPath, rawData).then(() => {
+        var a = await writeFile(newPath, rawData).then(() => {
             fs.unlink(oldPath, function (err) {
                 if (err) console.log(err)
             })
+            console.log(getDateTime() + " Uploading " + files.file.originalFilename);
+            res.json({ status: "success" });
+        }).catch((ex) => {
+            res.json({ status: "error: " + ex.toString() });
         });
     });
 });
 
-const writeFile = async(filename, data, increment = 0) => {
+const writeFile = async (filename, data, increment = 0) => {
     let name = `${path.basename(filename, path.extname(filename))}${increment || ""}${path.extname(filename)}`;
     name = path.dirname(filename) + path.sep + name;
     // with 'wx' the write operation fails if the path exists
@@ -155,7 +186,11 @@ const writeFile = async(filename, data, increment = 0) => {
         if (ex.code === "EEXIST") {
             return writeFile(filename, data, ++increment)
         }
+
         throw ex
-    })
+    });
 }
 
+function getDateTime() {
+    return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+}
