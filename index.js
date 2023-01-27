@@ -19,6 +19,7 @@ app.use(express.static("public"));
 var devices = []; // array must follow the values sequence: [[fold, client, model, status], [...], ...]
 var fold = 0;
 var client = 0;
+var flower_server = '';
 
 /**
  * render the ejs and display added clients
@@ -45,6 +46,7 @@ app.listen(serverPort, function () {
  */
 app.post("/setConfig", function (req, res) {
     fold = req.body.fold;
+    flower_server = req.body.flower_url;
     res.redirect("/");
 });
 
@@ -82,7 +84,7 @@ app.get("/getDevices", function (req, res) {
  */
 app.get("/getConfig", function (req, res) {
     client++;
-    res.json({ fold: fold, client: client });
+    res.json({ fold: fold, client: client, flower_server: flower_server });
 
 });
 

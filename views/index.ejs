@@ -9,26 +9,102 @@
 
 <body>
 
-    <h1>H-IAAC - Federated Test</h1>
+    <h1>H-IAAC - Federated Config Tool</h1>
 
-    <h2>Setup</h2>
-    <div class="setup">
-        <form action="/setConfig" method="POST">
-            <label for="fold">Fold:</label>
-            <select onchange="onFoldChanged()" name="fold" id="fold">
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
-        </form>
+    <div class="grid-container-setup">
+        <!-- Android client config -->
+        <div class="grid-child">
+            <h2>Devices Setup</h2>
+            <div class="setup-android">
+                <form action="/setConfig" method="POST">
+                    <label for="fold">Fold:</label>
+                    <select onchange="onFoldChanged()" name="fold" id="fold">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <!-- Flower server config -->
+        <div class="grid-child">
+            <h2>Flower Server Setup</h2>
+            <div class="setup-flower">
+
+                <!-- Config form -->
+                <div class="grid-container-flower">
+                    <!-- Row 0 -->
+                    <div class="grid-child">
+                        <label id="flower_url">Flower address:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="flower_address">
+                    </div>
+
+                    <div class="grid-child"></div>
+                    <div class="grid-child"></div>
+                    <div class="grid-child"></div>
+                    <div class="grid-child"></div>
+
+                    <!-- Row 1 -->
+                    <div class="grid-child">
+                        <label>min_available_clients:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="min_available_clients">
+                    </div>
+                    <div class="grid-child">
+                        <label>fraction_fit:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="fraction_fit">
+                    </div>
+                    <div class="grid-child">
+                        <label>fraction_eval:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="fraction_eval">
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div class="grid-child">
+                        <label>num_rounds:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="num_rounds">
+                    </div>
+                    <div class="grid-child">
+                        <label>min_fit_clients:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="min_fit_clients">
+                    </div>
+                    <div class="grid-child">
+                        <label>min_eval_clients:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="min_eval_clients">
+                    </div>
+                </div>
+
+                <div>
+                    <button onclick="onStartFlowerServer()">Start</button>
+                    <button onclick="onStopFlowerServer()">Stop</button>
+                    <button onclick="onGetFlowerStatus()">Refresh</button>
+                    <button onclick="onGoToLogs()">Logs</button>
+                </div>
+                <label id="flower_server_response">---</label>
+            </div>
+        </div>
     </div>
 
-    <h2> Devices </h2>
+    <h2> Remote Devices </h2>
     <div class="devices">
         <form action="/reset" method="POST">
-            <button type="submit" id="newtestBtn" hidden>NEW TEST</button>
+            <button type="submit" id="newtestBtn" hidden>Reset</button>
         </form>
         <table id="table">
             <tr>
@@ -58,21 +134,30 @@
 </body>
 
 <script type="text/javascript">
+
+    var flower_url = document.getElementById('flower_address');
+    var fraction_fit = document.getElementById('fraction_fit');
+    var fraction_eval = document.getElementById('fraction_eval');
+    var min_fit_clients = document.getElementById('min_fit_clients');
+    var min_eval_clients = document.getElementById('min_eval_clients');
+    var min_available_clients = document.getElementById('min_available_clients');
+    var num_rounds = document.getElementById('num_rounds');
+    var flower_status = document.getElementById('flower_server_response');
+
+    flower_url.value = "vm.hiaac.ic.unicamp.br:8082/";
+
     // Get the initial value for 'fold' (defined on index.js)
-    var fold = <%= fold %>;
-    document.getElementById("fold").value = fold;
+    var fold = document.getElementById("fold");
+    fold.value = <%= fold %>;
 
     // When a new Fold value is selected
     function onFoldChanged() {
-        var x = document.getElementById("fold").value;
-        post('/setConfig/', { fold: x });
+        post('/setConfig/', { fold: fold.value,  flower_url: flower_url.value });
     }
 
     // Post a request
     function post(path, params, method = 'post') {
 
-        // The rest of this code assumes you are not using a library.
-        // It can be made less verbose if you use one.
         const form = document.createElement('form');
         form.method = method;
         form.action = path;
@@ -90,8 +175,82 @@
 
         document.body.appendChild(form);
         form.submit();
+
+        return false;
     }
 
+    function onGoToLogs() {
+        if (flower_url.value)
+            window.open("http://" + flower_url.value, "_blank");
+        else
+            flower_status.innerHTML = "Missing flower address.";
+    }
+
+    function onGetFlowerStatus() {
+        fetch('http://' + flower_url.value + 'status')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                flower_status.innerHTML = (data.isRunning) ? "Server Running" : "Server not Running";
+
+                // Update UI with values from the server
+                fraction_fit.value = data.fraction_fit;
+                fraction_eval.value = data.fraction_eval;
+                min_fit_clients.value = data.min_fit_clients;
+                min_eval_clients.value = data.min_eval_clients;
+                min_available_clients.value = data.min_available_clients;
+                num_rounds.value = data.num_rounds;
+            })
+            .catch(error => {
+                flower_status.innerHTML = error.message;
+            });
+    }
+
+    function onStartFlowerServer() {
+        postOnFlowerServer('run');
+
+        // After send the request, get a new status after 3 sec.
+        setTimeout(function() {
+            onGetFlowerStatus();
+        }, 3000);
+
+        flower_status.innerHTML = "Flower server starting.";
+    }
+
+    function onStopFlowerServer() {
+        postOnFlowerServer('stop');
+    }
+
+    // Post on Flower Server
+    function postOnFlowerServer(api_path) {
+        var form = new FormData();
+        var req = new XMLHttpRequest();
+
+        req.open("POST", 'http://' + flower_url.value + api_path, true);
+
+        form.append("fraction_fit", fraction_fit.value);
+        form.append("fraction_eval", fraction_eval.value);
+        form.append("min_fit_clients", min_fit_clients.value);
+        form.append("min_eval_clients", min_eval_clients.value);
+        form.append("min_available_clients", min_available_clients.value);
+        form.append("num_rounds", num_rounds.value);
+
+        req.onreadystatechange = function() {
+            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                if (req.response)
+                    flower_status.innerHTML = JSON.parse(req.response).reason;
+            } else {
+                if (req.response)
+                    flower_status.innerHTML = JSON.parse(req.response).reason;
+            }
+        }
+        req.send(form);
+    }
+
+
+
+    // Refresh the "Remote Devices" list every 3 secs.
     var interval = 3000;
     function doAjax() {
         $.ajax({
