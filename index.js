@@ -18,14 +18,20 @@ app.use(express.static("public"));
 // The following variables represent the app state.
 var devices = []; // array must follow the values sequence: [[fold, client, model, status], [...], ...]
 var fold = 0;
-var client = 0;
-var flower_server = '';
+var client = -1;
+var flower_server = 'vm.hiaac.ic.unicamp.br';
+var flower_port = '8083';
+var flower_api_port = '8082';
 
 /**
  * render the ejs and display added clients
  */
 app.get("/", function (req, res) {
-    res.render("index", { fold: fold, devices: devices });
+    res.render("index", { fold: fold,
+                          devices: devices,
+                          flower_server: flower_server,
+                          flower_port: flower_port,
+                          flower_api_port:flower_api_port });
 });
 
 /**
@@ -47,6 +53,8 @@ app.listen(serverPort, function () {
 app.post("/setConfig", function (req, res) {
     fold = req.body.fold;
     flower_server = req.body.flower_url;
+    flower_port = req.body.flower_port;
+    flower_api_port = req.body.flower_api_port;
     res.redirect("/");
 });
 
@@ -57,7 +65,7 @@ app.post("/setConfig", function (req, res) {
  */
 app.post("/reset", function (req, res) {
     devices = [];
-    client = 0;
+    client = -1;
     res.redirect("/");
 });
 
@@ -84,8 +92,10 @@ app.get("/getDevices", function (req, res) {
  */
 app.get("/getConfig", function (req, res) {
     client++;
-    res.json({ fold: fold, client: client, flower_server: flower_server });
-
+    res.json({ fold: fold, client: client,
+               flower_server: flower_server,
+               flower_port: flower_port,
+               flower_api_port: flower_api_port });
 });
 
 /**

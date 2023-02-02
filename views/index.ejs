@@ -43,11 +43,18 @@
                     <div class="grid-child">
                         <input type="text" id="flower_address">
                     </div>
-
-                    <div class="grid-child"></div>
-                    <div class="grid-child"></div>
-                    <div class="grid-child"></div>
-                    <div class="grid-child"></div>
+                    <div class="grid-child">
+                        <label>Flower port:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="flower_port">
+                    </div>
+                    <div class="grid-child">
+                        <label>Flower API port:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="flower_api_port">
+                    </div>
 
                     <!-- Row 1 -->
                     <div class="grid-child">
@@ -136,6 +143,8 @@
 <script type="text/javascript">
 
     var flower_url = document.getElementById('flower_address');
+    var flower_port = document.getElementById('flower_port');
+    var flower_api_port = document.getElementById('flower_api_port');
     var fraction_fit = document.getElementById('fraction_fit');
     var fraction_eval = document.getElementById('fraction_eval');
     var min_fit_clients = document.getElementById('min_fit_clients');
@@ -144,7 +153,9 @@
     var num_rounds = document.getElementById('num_rounds');
     var flower_status = document.getElementById('flower_server_response');
 
-    flower_url.value = "vm.hiaac.ic.unicamp.br:8082/";
+    flower_url.value = "<%= flower_server %>";
+    flower_port.value = "<%= flower_port %>";
+    flower_api_port.value = "<%= flower_api_port %>";
 
     // Get the initial value for 'fold' (defined on index.js)
     var fold = document.getElementById("fold");
@@ -152,7 +163,10 @@
 
     // When a new Fold value is selected
     function onFoldChanged() {
-        post('/setConfig/', { fold: fold.value,  flower_url: flower_url.value });
+        post('/setConfig/', { fold: fold.value,
+                              flower_url: flower_url.value,
+                              flower_port: flower_port.value,
+                              flower_api_port: flower_api_port.value });
     }
 
     // Post a request
@@ -181,13 +195,13 @@
 
     function onGoToLogs() {
         if (flower_url.value)
-            window.open("http://" + flower_url.value, "_blank");
+            window.open("http://" + flower_url.value + ":" + flower_api_port.value, "_blank");
         else
             flower_status.innerHTML = "Missing flower address.";
     }
 
     function onGetFlowerStatus() {
-        fetch('http://' + flower_url.value + 'status')
+        fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
             .then(function(response) {
                 return response.json();
             })
@@ -208,7 +222,7 @@
     }
 
     function onStartFlowerServer() {
-        postOnFlowerServer('run');
+        postOnFlowerServer('/run');
 
         // After send the request, get a new status after 3 sec.
         setTimeout(function() {
@@ -219,7 +233,7 @@
     }
 
     function onStopFlowerServer() {
-        postOnFlowerServer('stop');
+        postOnFlowerServer('/stop');
     }
 
     // Post on Flower Server
@@ -227,7 +241,7 @@
         var form = new FormData();
         var req = new XMLHttpRequest();
 
-        req.open("POST", 'http://' + flower_url.value + api_path, true);
+        req.open("POST", 'http://' + flower_url.value + ":" + flower_api_port.value + api_path, true);
 
         form.append("fraction_fit", fraction_fit.value);
         form.append("fraction_eval", fraction_eval.value);
@@ -247,8 +261,6 @@
         }
         req.send(form);
     }
-
-
 
     // Refresh the "Remote Devices" list every 3 secs.
     var interval = 3000;
