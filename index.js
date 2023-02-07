@@ -160,48 +160,35 @@ app.post("/upload", function (req, res) {
             newPath = path.join(__dirname, 'uploads');
         }
 
+        console.log(getDateTime() + " New upload request to [" + fields.directory + "] [" + files.file.originalFilename + "] success.");
+
         // Create the directory when files will be stored
-        fs.mkdir(newPath, { recursive: true }, (err) => {
-        });
+        if (!fs.existsSync(newPath)) {
+            fs.mkdirSync(newPath, { recursive: true }   );
+        }
 
         // Append file name to the path
         newPath = newPath + path.sep + files.file.originalFilename;
 
         if (fields.ignore && fields.ignore !== "false") {
             if (fs.existsSync(newPath)) {
-                console.log(getDateTime() + " Ignoring file " + newPath + " as it already exists");
+                console.log(getDateTime() + " Ignoring file [" + newPath + "] as it already exists");
                 res.json({ status: "success" });
                 return;
             }
         }
 
         // Get file content on tmp dir.
-        var rawData = fs.readFileSync(oldPath)
-
-        var a = await writeFile(newPath, rawData).then(() => {
-            fs.unlink(oldPath, function (err) {
-                if (err) console.log(err)
-            })
-            console.log(getDateTime() + " Uploading " + files.file.originalFilename);
+        try {
+            fs.renameSync(oldPath, newPath);
             res.json({ status: "success" });
-        }).catch((ex) => {
+            console.log(getDateTime() + " Uploading to [" + newPath + "] success.");
+        } catch (ex) {
+            console.log(getDateTime() + " Uploading to [" + newPath + "] failed. " + ex.toString());
             res.json({ status: "error: " + ex.toString() });
-        });
+        }
     });
 });
-
-const writeFile = async (filename, data, increment = 0) => {
-    let name = `${path.basename(filename, path.extname(filename))}${increment || ""}${path.extname(filename)}`;
-    name = path.dirname(filename) + path.sep + name;
-    // with 'wx' the write operation fails if the path exists
-    return fs.promises.writeFile(name, data, { encoding: 'utf8', flag: 'wx' }).catch(ex => {
-        if (ex.code === "EEXIST") {
-            return writeFile(filename, data, ++increment)
-        }
-
-        throw ex
-    });
-}
 
 function getDateTime() {
     return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
