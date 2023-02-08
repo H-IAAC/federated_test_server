@@ -64,25 +64,15 @@
                         <input type="text" id="min_available_clients">
                     </div>
                     <div class="grid-child">
-                        <label>fraction_fit:</label>
-                    </div>
-                    <div class="grid-child">
-                        <input type="text" id="fraction_fit">
-                    </div>
-                    <div class="grid-child">
-                        <label>fraction_eval:</label>
-                    </div>
-                    <div class="grid-child">
-                        <input type="text" id="fraction_eval">
-                    </div>
-
-                    <!-- Row 2 -->
-                    <div class="grid-child">
                         <label>num_rounds:</label>
                     </div>
                     <div class="grid-child">
                         <input type="text" id="num_rounds">
                     </div>
+                    <div class="grid-child"></div>
+                    <div class="grid-child"></div>
+
+                    <!-- Row 2 -->
                     <div class="grid-child">
                         <label>min_fit_clients:</label>
                     </div>
@@ -90,10 +80,36 @@
                         <input type="text" id="min_fit_clients">
                     </div>
                     <div class="grid-child">
+                        <label>fraction_fit:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="fraction_fit">
+                    </div>
+                    <div class="grid-child">
+                        <label>batch_size:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="batch_size">
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="grid-child">
                         <label>min_eval_clients:</label>
                     </div>
                     <div class="grid-child">
                         <input type="text" id="min_eval_clients">
+                    </div>
+                    <div class="grid-child">
+                        <label>fraction_eval:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="fraction_eval">
+                    </div>
+                    <div class="grid-child">
+                        <label>local_epochs:</label>
+                    </div>
+                    <div class="grid-child">
+                        <input type="text" id="local_epochs">
                     </div>
                 </div>
 
@@ -142,16 +158,18 @@
 
 <script type="text/javascript">
 
-    var flower_url = document.getElementById('flower_address');
-    var flower_port = document.getElementById('flower_port');
-    var flower_api_port = document.getElementById('flower_api_port');
-    var fraction_fit = document.getElementById('fraction_fit');
-    var fraction_eval = document.getElementById('fraction_eval');
-    var min_fit_clients = document.getElementById('min_fit_clients');
-    var min_eval_clients = document.getElementById('min_eval_clients');
-    var min_available_clients = document.getElementById('min_available_clients');
-    var num_rounds = document.getElementById('num_rounds');
-    var flower_status = document.getElementById('flower_server_response');
+    var flower_url = $('#flower_address')[0];
+    var flower_port = $('#flower_port')[0];
+    var flower_api_port = $('#flower_api_port')[0];
+    var fraction_fit = $('#fraction_fit')[0];
+    var fraction_eval = $('#fraction_eval')[0];
+    var min_fit_clients = $('#min_fit_clients')[0];
+    var min_eval_clients = $('#min_eval_clients')[0];
+    var min_available_clients = $('#min_available_clients')[0];
+    var batch_size = $('#batch_size')[0];
+    var local_epochs = $('#local_epochs')[0];
+    var num_rounds = $('#num_rounds')[0];
+    var flower_status = $('#flower_server_response')[0];
 
     flower_url.value = "<%= flower_server %>";
     flower_port.value = "<%= flower_port %>";
@@ -160,6 +178,8 @@
     // Get the initial value for 'fold' (defined on index.js)
     var fold = document.getElementById("fold");
     fold.value = <%= fold %>;
+
+    onGetFlowerStatus();
 
     // When a new Fold value is selected
     function onFoldChanged() {
@@ -214,6 +234,8 @@
                 min_fit_clients.value = data.min_fit_clients;
                 min_eval_clients.value = data.min_eval_clients;
                 min_available_clients.value = data.min_available_clients;
+                batch_size.value = data.batch_size;
+                local_epochs.value = data.local_epochs;
                 num_rounds.value = data.num_rounds;
             })
             .catch(error => {
@@ -248,6 +270,8 @@
         form.append("min_fit_clients", min_fit_clients.value);
         form.append("min_eval_clients", min_eval_clients.value);
         form.append("min_available_clients", min_available_clients.value);
+        form.append("batch_size", batch_size.value);
+        form.append("local_epochs", local_epochs.value);
         form.append("num_rounds", num_rounds.value);
 
         req.onreadystatechange = function() {
