@@ -41,19 +41,19 @@
                         <label id="flower_url">Flower address:</label>
                     </div>
                     <div class="grid-child">
-                        <input type="text" id="flower_address">
+                        <input type="text" id="flower_address" onchange="onConfigChange()">
                     </div>
                     <div class="grid-child">
                         <label>Flower port:</label>
                     </div>
                     <div class="grid-child">
-                        <input type="text" id="flower_port">
+                        <input type="text" id="flower_port" onchange="onConfigChange()">
                     </div>
                     <div class="grid-child">
                         <label>Flower API port:</label>
                     </div>
                     <div class="grid-child">
-                        <input type="text" id="flower_api_port">
+                        <input type="text" id="flower_api_port" onchange="onConfigChange()">
                     </div>
 
                     <!-- Row 1 -->
@@ -183,6 +183,13 @@
 
     // When a new Fold value is selected
     function onFoldChanged() {
+        post('/setConfig/', { fold: fold.value,
+                              flower_url: flower_url.value,
+                              flower_port: flower_port.value,
+                              flower_api_port: flower_api_port.value });
+    }
+
+    function onConfigChange() {
         post('/setConfig/', { fold: fold.value,
                               flower_url: flower_url.value,
                               flower_port: flower_port.value,
