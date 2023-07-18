@@ -1,0 +1,33 @@
+[build-system]
+requires = [
+    "poetry==1.1.14",
+]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "Federated learning HAR"
+version = "0.1.0"
+description = "HAR federated learning using Flower"
+authors = ["Adapted from original code of Eduarda Chagas <eduarda.chagas@dcc.ufmg.br>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8.2,<3.10"
+flwr = "^0.18.0"
+torch = "1.10.2"
+torchvision = "0.11.3"
+pandas = "^1.4.1"
+numpy = "^1.22.3"
+matplotlib = "^3.5.1"
+tensorflow = "2.9.1"
+scikit-learn = "1.0.2"
+keras-tuner = "1.1.2"
+scikit-multilearn = "0.2.0"
+xeus-python = "^0.14.1"
+notebook = "^6.4.12"
+SQLAlchemy = "^1.4.39"
+flask = "^2.2.2"
+flask-cors = "3.0.10"
+logging = "^0.4.9.6"
+
+[tool.poetry.dev-dependencies]
+jupyter = "^1.0.0"

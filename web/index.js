@@ -55,7 +55,6 @@ app.post("/setConfig", function (req, res) {
     flower_server = req.body.flower_url;
     flower_port = req.body.flower_port;
     flower_api_port = req.body.flower_api_port;
-    console.log("/setConfig: " + JSON.stringify(req.body));
     res.redirect("/");
 });
 
@@ -93,12 +92,10 @@ app.get("/getDevices", function (req, res) {
  */
 app.get("/getConfig", function (req, res) {
     client++;
-    var json = { fold: fold, client: client,
-                flower_server: flower_server,
-                flower_port: flower_port,
-                flower_api_port: flower_api_port };
-    console.log("/getConfig: " + JSON.stringify(json));
-    res.json(json);
+    res.json({ fold: fold, client: client,
+               flower_server: flower_server,
+               flower_port: flower_port,
+               flower_api_port: flower_api_port });
 });
 
 /**
