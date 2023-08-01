@@ -1,8 +1,6 @@
 import os
 import flwr as fl
-import tensorflow
 import grpc
-import flatbuffers
 import google.protobuf as protobuf
 import json
 import argparse
@@ -13,9 +11,7 @@ from multiprocessing import Process
 import logging
 
 print(f"flwr: {fl.__version__}")
-print(f"tensorflow: {tensorflow.__version__}")
 print(f"grpcio: {grpc.__version__}")
-print(f"flatbuffers: {flatbuffers.__version__}")
 print(f"protobuf: {protobuf.__version__}")
 
 config = {
