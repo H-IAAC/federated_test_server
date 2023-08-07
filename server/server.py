@@ -33,7 +33,7 @@ status = {'isRunning': False,
           'fraction_fit': 1.0, 'fraction_eval': 1.0,
           'min_fit_clients': 1, 'min_eval_clients': 1,
           'min_available_clients': 1,
-          'eval_fn': None,
+          'evaluate_fn': None,
           'initial_parameters': None,
           'num_rounds': 5,
           'batch_size': 32,
@@ -92,7 +92,7 @@ def get():
 @cross_origin()
 def get_status():
     global status
-    log(f"configuration: {status}")
+    #log(f"configuration: {status}")
     return jsonify(status)
 
 
@@ -137,35 +137,35 @@ def run_flower():
         try:
             _num_rounds: int = int(request.form['num_rounds'])
             _fraction_fit: float = float(request.form['fraction_fit'])
-            _fraction_eval: float = float(request.form['fraction_eval'])
+            _fraction_evaluate: float = float(request.form['fraction_eval'])
             _min_fit_clients: int = int(request.form['min_fit_clients'])
-            _min_eval_clients: int = int(request.form['min_eval_clients'])
+            _min_evaluate_clients: int = int(request.form['min_eval_clients'])
             _min_available_clients: int = int(request.form['min_available_clients'])
             _batch_size: int = int(request.form['batch_size'])
             _local_epochs: int = int(request.form['local_epochs'])
 
-            # _eval_fn = request.form['eval_fn']
+            # _evaluate_fn = request.form['evaluate_fn']
             # _initial_parameters = request.form['initial_parameters']
 
             status = {'isRunning': True,
-                      'fraction_fit': _fraction_fit, 'fraction_eval': _fraction_eval,
-                      'min_fit_clients': _min_fit_clients, 'min_eval_clients': _min_eval_clients,
+                      'fraction_fit': _fraction_fit, 'fraction_eval': _fraction_evaluate,
+                      'min_fit_clients': _min_fit_clients, 'min_eval_clients': _min_evaluate_clients,
                       'min_available_clients': _min_available_clients,
                       'batch_size': _batch_size,
                       'local_epochs': _local_epochs,
                       'num_rounds': _num_rounds}
 
-            log(f"===## Starting FLOWER SERVER ##===")
+            log(f"===## Starting FLOWER SERVER ##============================")
             log(f"Starting parameters: {status}")
 
             # Create strategy
             strategy = fl.server.strategy.FedAvgAndroid(
                 fraction_fit=_fraction_fit,
-                fraction_eval=_fraction_eval,
+                fraction_evaluate=_fraction_evaluate,
                 min_fit_clients=_min_fit_clients,
-                min_eval_clients=_min_eval_clients,
+                min_evaluate_clients=_min_evaluate_clients,
                 min_available_clients=_min_available_clients,
-                eval_fn=None,
+                evaluate_fn=None,
                 initial_parameters=None,
                 on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
 
@@ -178,7 +178,7 @@ def run_flower():
             # wait for the process to finish
             flower_process.join()
 
-            log("===## FLOWER SERVER is now disabled ##===")
+            log("============================## FLOWER SERVER is now DISABLED ##===")
 
         except Exception as e:
             log(f"Invalid request, exception: {e}")
@@ -194,10 +194,10 @@ def run_flower():
 #
 #####
 def start_flower_server(strategy, _num_rounds):
-    # Start Flower server for 10 rounds of federated learning
+    # Start Flower server
     fl.server.start_server(
         server_address="0.0.0.0:8083",
-        config={"num_rounds": _num_rounds},
+        config=fl.server.ServerConfig(num_rounds=_num_rounds),
         strategy=strategy,
     )
 
