@@ -12,7 +12,7 @@ authors = ["H.IAAC - Hub of Artificial Intelligence and Cognitive Architectures 
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-flwr = "1.4.0"
+flwr = "0.18.0"
 flask = "^2.2.2"
 flask-cors = "3.0.10"
 logging = "^0.4.9.6"
