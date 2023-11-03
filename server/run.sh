@@ -17,8 +17,7 @@ status () {
 
 start () {
     echo 'Starting'
-    cd $SCRIPTPATH
-    nohup ~/.local/bin/./poetry run python3 $SCRIPTPATH/server.py --port 8082 >> $SCRIPTPATH/log.txt 2>&1  &
+    nohup poetry run python3 $SCRIPTPATH/server.py --port 8082 >> log.txt 2>&1  &
 }
 
 stop () {

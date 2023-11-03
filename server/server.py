@@ -1,7 +1,9 @@
 import os
 import flwr as fl
+import tensorflow
 import grpc
-import google.protobuf as protobuf
+import google.protobuf
+import flatbuffers
 import json
 import argparse
 from datetime import datetime
@@ -9,10 +11,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
+import multiprocessing
 
 print(f"flwr: {fl.__version__}")
+print(f"tensorflow: {tensorflow.__version__}")
+print(f"protobuf: {google.protobuf.__version__}")
 print(f"grpcio: {grpc.__version__}")
-print(f"protobuf: {protobuf.__version__}")
+print(f"flatbuffers: {flatbuffers.__version__}")
 
 config = {
     'ORIGINS': [
