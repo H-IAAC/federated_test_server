@@ -7,7 +7,7 @@ const formidable = require('formidable');
 const app = express();
 
 // app setup
-const serverPort = 8080;
+var serverPort = 8080;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
@@ -22,6 +22,29 @@ var client = -1;
 var flower_server = 'vm.hiaac.ic.unicamp.br';
 var flower_port = '8083';
 var flower_api_port = '8082';
+
+
+// parse command line args
+const args = process.argv.slice(2);
+switch (args[0]) {
+    case '-h':
+        console.log('Usage:');
+        console.log('  -p <port_number>');
+        console.log('');
+        return;
+
+    case '-p':
+        if (args[1] === undefined) {
+            console.log('Missing the port value.');
+            return;
+        }
+        serverPort = args[1];
+        break;
+
+    default:
+        console.log('Invalid argument: ' + args[2]);
+}
+
 
 /**
  * render the ejs and display added clients
