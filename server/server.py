@@ -23,6 +23,8 @@ config = {
     'ORIGINS': [
         'http://localhost:8080',
         'http://127.0.0.1:8080',
+        'http://localhost:8070',
+        'http://127.0.0.1:8070',
     ],
 }
 
@@ -200,8 +202,9 @@ def run_flower():
 #####
 def start_flower_server(strategy, _num_rounds):
     # Start Flower server for 10 rounds of federated learning
+    log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
-        server_address="0.0.0.0:8083",
+        server_address=f"0.0.0.0:{flower_server_port}",
         config={"num_rounds": _num_rounds},
         strategy=strategy,
     )
@@ -224,16 +227,21 @@ def log(msg):
 #####
 if __name__ == "__main__":
     server_port = 8082
+    flower_server_port = 8083
 
     parser = argparse.ArgumentParser(
         description="Flower server"
     )
 
     parser.add_argument("--port", help="server port (default: 8082)")
+    parser.add_argument("--flower_port", help="flower server port (default: 8083)")
     args = parser.parse_args()
 
     if args.port is not None:
         server_port = args.port
+
+    if args.flower_port is not None:
+        flower_server_port = args.flower_port
 
     log("==============================================")
     log(f"======== Service started on port: {server_port} =======")

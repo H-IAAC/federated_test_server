@@ -17,7 +17,13 @@ status () {
 
 start () {
     echo 'Starting'
-    nohup poetry run python3 $SCRIPTPATH/server.py --port 8082 >> log.txt 2>&1  &
+    if [ -z $2 ]; then
+        echo "Using port 8082"
+        nohup poetry run python3 $SCRIPTPATH/server.py --port 8082 >> log.txt 2>&1 &
+    else
+        echo "Using port $2"
+        nohup poetry run python3 $SCRIPTPATH/server.py --port $2 >> log.txt 2>&1 &
+    fi
 }
 
 stop () {
@@ -35,7 +41,7 @@ help () {
 
 case $1 in
     status) status ;;
-    start) start ;;
+    start) start $# $2 ;;
     stop) stop ;;
     *) help ;;
 esac
