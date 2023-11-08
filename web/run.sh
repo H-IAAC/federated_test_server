@@ -16,9 +16,9 @@ status () {
 }
 
 start () {
-    echo 'Starting'
+    echo 'Starting, on port '$1
     cd $SCRIPTPATH
-    nohup node $SCRIPTPATH/index.js >> $SCRIPTPATH/log.out 2>&1 &
+    nohup node $SCRIPTPATH/index.js -p $1 >> $SCRIPTPATH/log.out 2>&1 &
 }
 
 stop () {
@@ -36,7 +36,7 @@ help () {
 
 case $1 in
     status) status ;;
-    start) start ;;
+    start) start $3 ;;
     stop) stop ;;
     *) help ;;
 esac
