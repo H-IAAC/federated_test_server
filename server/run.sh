@@ -21,8 +21,9 @@ start () {
         echo "Using port 8082"
         nohup poetry run python3 $SCRIPTPATH/server.py --port 8082 >> log.txt 2>&1 &
     else
+        # Usage for TEST env: ./run.sh start 8072 8073
         echo "Using port $2"
-        nohup poetry run python3 $SCRIPTPATH/server.py --port $2 >> log.txt 2>&1 &
+        nohup poetry run python3 $SCRIPTPATH/server.py --port $2 --flower_port $3 >> log.txt 2>&1 &
     fi
 }
 
@@ -41,7 +42,7 @@ help () {
 
 case $1 in
     status) status ;;
-    start) start $# $2 ;;
+    start) start $# $2 $3;;
     stop) stop ;;
     *) help ;;
 esac

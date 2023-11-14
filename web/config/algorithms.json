@@ -1,0 +1,17 @@
+{
+    "algorithms": [
+      {
+        "none": {}
+      },
+      {
+        "rawcs": {
+          "maxAcceptableBatteryLevel": "100",
+          "maxDesirableTrainingTime": "10",
+          "clientMinimumDesirableNetworkQuality": "10",
+          "batteryWeigthInClient": "10",
+          "networkQualityWeightInClient": "10",
+          "targetEvaluationAccuracy": "10"
+        }
+      }
+    ]
+  }

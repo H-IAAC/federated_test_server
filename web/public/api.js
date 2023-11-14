@@ -1,111 +1,111 @@
-console.log("loaded")
+// Post on Flower Server
+function postOnFlowerServer(api_path) {
+  var form = new FormData();
+  var req = new XMLHttpRequest();
 
-function scatterplot(data) {
-  var margin = { top: 20, right: 20, bottom: 30, left: 40 },
-    // ****    width = 960 - margin.left - margin.right, ****
-    // ****    height = 500 - margin.top - margin.bottom; ****
-    width = 720 - margin.left - margin.right,
-    height = 375 - margin.top - margin.bottom;
+  req.open("POST", 'http://' + flower_url.value + ":" + flower_api_port.value + api_path, true);
 
-  var x = d3.scaleLinear().range([0, width]);
+  form.append("fraction_fit", fraction_fit.value);
+  form.append("fraction_eval", fraction_eval.value);
+  form.append("min_fit_clients", min_fit_clients.value);
+  form.append("min_eval_clients", min_eval_clients.value);
+  form.append("min_available_clients", min_available_clients.value);
+  form.append("batch_size", batch_size.value);
+  form.append("local_epochs", local_epochs.value);
+  form.append("num_rounds", num_rounds.value);
 
-  var y = d3.scaleLinear().range([height, 0]);
+  req.onreadystatechange = function() {
+      if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+          if (req.response)
+              flower_status.innerHTML = JSON.parse(req.response).reason;
+      } else {
+          if (req.response)
+              flower_status.innerHTML = JSON.parse(req.response).reason;
+      }
+  }
+  req.send(form);
+}
 
-  var color = d3.scaleOrdinal(d3.schemeCategory10);
+// Post a request
+function post(path, params, method = 'post') {
 
-  var xAxis = d3.axisBottom(x);
+  const form = document.createElement('form');
+  form.method = method;
+  form.action = path;
 
-  var yAxis = d3.axisLeft(y);
+  for (const key in params) {
+      if (params.hasOwnProperty(key)) {
+          const hiddenField = document.createElement('input');
+          hiddenField.type = 'hidden';
+          hiddenField.name = key;
+          hiddenField.value = params[key];
 
-  var svg = d3
-    .select("body")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          form.appendChild(hiddenField);
+      }
+  }
 
-  data.forEach(function (d) {
-    d.sepalLength = +d.sepalLength;
-    d.sepalWidth = +d.sepalWidth;
-  });
+  document.body.appendChild(form);
+  form.submit();
 
-  x.domain(
-    d3.extent(data, function (d) {
-      return d.sepalWidth;
-    })
-  ).nice();
-  y.domain(
-    d3.extent(data, function (d) {
-      return d.sepalLength;
-    })
-  ).nice();
+  return false;
+}
 
-  svg
-    .append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
-    .call(xAxis)
-    .append("text")
-    .attr("class", "label")
-    .attr("x", width)
-    .attr("y", -6)
-    .style("text-anchor", "end")
-    .text("Sepal Width (cm)");
+function getFlowerStatus() {
+  fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
+      .then(function(response) {
+          return response.json();
+      })
+      .then(function(data) {
+          flower_status.innerHTML = (data.isRunning) ? "Server Running" : "Server not Running";
 
-  svg
-    .append("g")
-    .attr("class", "y axis")
-    .call(yAxis)
-    .append("text")
-    .attr("class", "label")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 6)
-    .attr("dy", ".71em")
-    .style("text-anchor", "end")
-    .text("Sepal Length (cm)");
+          // Update UI with values from the server
+          fraction_fit.value = data.fraction_fit;
+          fraction_eval.value = data.fraction_eval;
+          min_fit_clients.value = data.min_fit_clients;
+          min_eval_clients.value = data.min_eval_clients;
+          min_available_clients.value = data.min_available_clients;
+          batch_size.value = data.batch_size;
+          local_epochs.value = data.local_epochs;
+          num_rounds.value = data.num_rounds;
+      })
+      .catch(error => {
+          flower_status.innerHTML = error.message;
+      });
+}
 
-  svg
-    .selectAll(".dot")
-    .data(data)
-    .enter()
-    .append("circle")
-    .attr("class", "dot")
-    .attr("r", 3.5)
-    .attr("cx", function (d) {
-      return x(d.sepalWidth);
-    })
-    .attr("cy", function (d) {
-      return y(d.sepalLength);
-    })
-    .style("fill", function (d) {
-      return color(d.species);
-    });
+// Refresh the "Remote Devices" list every 3 secs.
+var interval = 3000;
+function doAjax() {
+    $.ajax({
+        type: 'GET',
+        url: '/getDevices',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function (data) {
+            var table = document.getElementById("table");
 
-  var legend = svg
-    .selectAll(".legend")
-    .data(color.domain())
-    .enter()
-    .append("g")
-    .attr("class", "legend")
-    .attr("transform", function (d, i) {
-      return "translate(0," + i * 20 + ")";
-    });
+            for (var i = table.rows.length; i > 1; i = table.rows.length) {
+                table.deleteRow(i - 1);
+            }
 
-  legend
-    .append("rect")
-    .attr("x", width - 18)
-    .attr("width", 18)
-    .attr("height", 18)
-    .style("fill", color);
+            for (var i = 0; i < data.devices.length; i++) {
+                var row = table.insertRow(table.rows.length);
+                row.insertCell(0).innerHTML = data.devices[i][0];
+                row.insertCell(1).innerHTML = data.devices[i][1];
+                row.insertCell(2).innerHTML = data.devices[i][2];
+                row.insertCell(3).innerHTML = data.devices[i][3];
+            }
 
-  legend
-    .append("text")
-    .attr("x", width - 24)
-    .attr("y", 9)
-    .attr("dy", ".35em")
-    .style("text-anchor", "end")
-    .text(function (d) {
-      return d;
+            if (table.rows.length > 1)
+                $("#newtestBtn").show();
+            else
+                $("#newtestBtn").hide();
+        },
+        complete: function (data) {
+            // Schedule the next
+            setTimeout(doAjax, interval);
+        }
     });
 }
+setTimeout(doAjax, interval);
+

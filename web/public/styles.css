@@ -110,3 +110,8 @@ ul {
     column-gap: 6px;
     row-gap: 10px;
 }
+
+.grid-select {
+    text-align: left;
+    margin: 10px;
+}

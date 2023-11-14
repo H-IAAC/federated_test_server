@@ -3,6 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require('fs');
 const path = require('path')
+const utils = require('./utils/utils');
 const formidable = require('formidable');
 const app = express();
 
@@ -22,7 +23,8 @@ var client = -1;
 var flower_server = 'vm.hiaac.ic.unicamp.br';
 var flower_port = '8083';
 var flower_api_port = '8082';
-
+var algorithm_name = 'none';
+var algorithm_params = '{}';
 
 // parse command line args
 const args = process.argv.slice(2);
@@ -54,7 +56,10 @@ app.get("/", function (req, res) {
                           devices: devices,
                           flower_server: flower_server,
                           flower_port: flower_port,
-                          flower_api_port:flower_api_port });
+                          flower_api_port:flower_api_port,
+                          algorithm_name: algorithm_name,       // name of the latest selected algorithm
+                          algorithm_params: algorithm_params,   // params of the latest selected algorithm
+                          algorithms_options: JSON.stringify(utils.get_config()) }); // always return the config file content
 });
 
 /**
@@ -78,6 +83,8 @@ app.post("/setConfig", function (req, res) {
     flower_server = req.body.flower_url;
     flower_port = req.body.flower_port;
     flower_api_port = req.body.flower_api_port;
+    algorithm_name = req.body.algorithm_name;       // receive the selected algorithm
+    algorithm_params = req.body.algorithm_params;   // receive the entered algorithm params
     res.redirect("/");
 });
 
@@ -118,7 +125,9 @@ app.get("/getConfig", function (req, res) {
     res.json({ fold: fold, client: client,
                flower_server: flower_server,
                flower_port: flower_port,
-               flower_api_port: flower_api_port });
+               flower_api_port: flower_api_port,
+               algorithm_name: algorithm_name,          // algorithm name, selected by the user
+               algorithm_params: algorithm_params});    // the algorithm entered by the user
 });
 
 /**

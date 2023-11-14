@@ -4,6 +4,8 @@
     <title>H-IAAC - Federated Test</title>
     <link href="https://fonts.googleapis.com/css?family=Lato:100" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
+    <script src="/api.js"></script>
+    <script src="/config.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 </head>
 
@@ -18,7 +20,7 @@
             <div class="setup-android">
                 <form action="/setConfig" method="POST">
                     <label for="fold">Fold:</label>
-                    <select onchange="onFoldChanged()" name="fold" id="fold">
+                    <select onchange="setConfiguration()" name="fold" id="fold">
                         <option value="0">0</option>
                         <option value="1">1</option>
                         <option value="2">2</option>
@@ -47,13 +49,13 @@
                         <label>Flower port:</label>
                     </div>
                     <div class="grid-child">
-                        <input type="text" id="flower_port">
+                        <input type="text" id="flower_port" title="Default values: Prod 8083 and Test 8073">
                     </div>
                     <div class="grid-child">
                         <label>Flower API port:</label>
                     </div>
                     <div class="grid-child">
-                        <input type="text" id="flower_api_port">
+                        <input type="text" id="flower_api_port" title="Default values: Prod 8082 and Test 8072">
                     </div>
 
                     <!-- Row 1 -->
@@ -113,11 +115,21 @@
                     </div>
                 </div>
 
+                <div class="grid-select">
+                    <select id="algorithms_select" onchange="onAlgorithmSelected()">
+                    </select>
+                </div>
+
+                <!-- Config form -->
+                <div class="grid-container-flower" id="grid-algorithms_params">
+                    
+                </div>
+
                 <div>
-                    <button onclick="onStartFlowerServer()">Start</button>
-                    <button onclick="onStopFlowerServer()">Stop</button>
-                    <button onclick="onGetFlowerStatus()">Refresh</button>
-                    <button onclick="onGoToLogs()">Logs</button>
+                    <button onclick="startFlowerServer()">Start</button>
+                    <button onclick="stopFlowerServer()">Stop</button>
+                    <button onclick="getFlowerStatus()">Refresh</button>
+                    <button onclick="goToLogs()">Logs</button>
                 </div>
                 <label id="flower_server_response">---</label>
             </div>
@@ -170,6 +182,8 @@
     var local_epochs = $('#local_epochs')[0];
     var num_rounds = $('#num_rounds')[0];
     var flower_status = $('#flower_server_response')[0];
+    var algorithms_select = $('#algorithms_select')[0];
+    var algorithms_params_div = $('#grid-algorithms_params')[0];
 
     flower_url.value = "<%= flower_server %>";
     flower_port.value = "<%= flower_port %>";
@@ -179,148 +193,94 @@
     var fold = document.getElementById("fold");
     fold.value = <%= fold %>;
 
-    onGetFlowerStatus();
+    // Get the previous algorithm values used by the user
+    var selected_algorithm = `<%- algorithm_name %>`;
+    var selected_algorithm_params = JSON.parse(`<%- algorithm_params %>`);
 
-    // When a new Fold value is selected
-    function onFoldChanged() {
+    // Get the default options, to the displayed to the user
+    var algorithms_options = JSON.parse(`<%- algorithms_options %>`);
+
+    // For each algorith option, get the name the use it in the select UI element
+    algorithms_options.algorithms.forEach((algo) => {
+        let name = Object.keys(algo)[0];
+        let value = Object.values(algo)[0];
+
+        // If algorithm previous selected by the user, is the same from the default options, then
+        // use the latest params entered, instead of the default options.
+        if (selected_algorithm == name) {
+            // create new 'select' option, using the user custom paramenters
+            algorithms_select.options[algorithms_select.options.length] = new Option(name,
+                                                                                     JSON.stringify(selected_algorithm_params));
+        } else {
+            // create new 'select' option, using the user default paramenters
+            algorithms_select.options[algorithms_select.options.length] = new Option(name,
+                                                                                     JSON.stringify(value));
+        }
+    });
+ 
+    // Check if there is an algorithm pre-selected, to set in the 'select' component
+    for (var i=0; i<algorithms_select.options.length; i++) {
+        if ("<%= algorithm_name %>" == algorithms_select.options[i].text) {
+            
+            if (algorithms_select.options[i].selected == false) {
+                algorithms_select.options[i].selected = true;
+                onAlgorithmSelected();
+            }
+        }
+    }
+
+    // Get status from Flower server, to update UI with information if the server is running or not
+    getFlowerStatus();
+
+    // Update options based on the selected algorithm
+    function onAlgorithmSelected() {
+        let config_json = JSON.parse(algorithms_select.value);
+
+        remove(algorithms_params_div);
+
+        jQuery.each(config_json, function(key, val) {
+            add(algorithms_params_div, key, val);
+        });
+    }
+
+    // Send configuration parameters to the server
+    function setConfiguration() {
+        // Get values from algorithm options
+        let current_algorithm_config = get(JSON.parse(algorithms_select.value));
+
         post('/setConfig/', { fold: fold.value,
                               flower_url: flower_url.value,
                               flower_port: flower_port.value,
-                              flower_api_port: flower_api_port.value });
+                              flower_api_port: flower_api_port.value,
+                              algorithm_name: algorithms_select.options[algorithms_select.selectedIndex].text,
+                              algorithm_params: JSON.stringify(current_algorithm_config) });
     }
 
-    // Post a request
-    function post(path, params, method = 'post') {
-
-        const form = document.createElement('form');
-        form.method = method;
-        form.action = path;
-
-        for (const key in params) {
-            if (params.hasOwnProperty(key)) {
-                const hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = key;
-                hiddenField.value = params[key];
-
-                form.appendChild(hiddenField);
-            }
-        }
-
-        document.body.appendChild(form);
-        form.submit();
-
-        return false;
-    }
-
-    function onGoToLogs() {
+    function goToLogs() {
         if (flower_url.value)
             window.open("http://" + flower_url.value + ":" + flower_api_port.value, "_blank");
         else
             flower_status.innerHTML = "Missing flower address.";
     }
 
-    function onGetFlowerStatus() {
-        fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                flower_status.innerHTML = (data.isRunning) ? "Server Running" : "Server not Running";
-
-                // Update UI with values from the server
-                fraction_fit.value = data.fraction_fit;
-                fraction_eval.value = data.fraction_eval;
-                min_fit_clients.value = data.min_fit_clients;
-                min_eval_clients.value = data.min_eval_clients;
-                min_available_clients.value = data.min_available_clients;
-                batch_size.value = data.batch_size;
-                local_epochs.value = data.local_epochs;
-                num_rounds.value = data.num_rounds;
-            })
-            .catch(error => {
-                flower_status.innerHTML = error.message;
-            });
+    function stopFlowerServer() {
+        postOnFlowerServer('/stop');
     }
 
-    function onStartFlowerServer() {
+    function startFlowerServer() {
+        // Save parameters from this execution
+        setConfiguration();
+
+        // Call api to start flower execution
         postOnFlowerServer('/run');
 
         // After send the request, get a new status after 3 sec.
         setTimeout(function() {
-            onGetFlowerStatus();
+            getFlowerStatus();
         }, 3000);
 
         flower_status.innerHTML = "Flower server starting.";
     }
-
-    function onStopFlowerServer() {
-        postOnFlowerServer('/stop');
-    }
-
-    // Post on Flower Server
-    function postOnFlowerServer(api_path) {
-        var form = new FormData();
-        var req = new XMLHttpRequest();
-
-        req.open("POST", 'http://' + flower_url.value + ":" + flower_api_port.value + api_path, true);
-
-        form.append("fraction_fit", fraction_fit.value);
-        form.append("fraction_eval", fraction_eval.value);
-        form.append("min_fit_clients", min_fit_clients.value);
-        form.append("min_eval_clients", min_eval_clients.value);
-        form.append("min_available_clients", min_available_clients.value);
-        form.append("batch_size", batch_size.value);
-        form.append("local_epochs", local_epochs.value);
-        form.append("num_rounds", num_rounds.value);
-
-        req.onreadystatechange = function() {
-            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-                if (req.response)
-                    flower_status.innerHTML = JSON.parse(req.response).reason;
-            } else {
-                if (req.response)
-                    flower_status.innerHTML = JSON.parse(req.response).reason;
-            }
-        }
-        req.send(form);
-    }
-
-    // Refresh the "Remote Devices" list every 3 secs.
-    var interval = 3000;
-    function doAjax() {
-        $.ajax({
-            type: 'GET',
-            url: '/getDevices',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function (data) {
-                var table = document.getElementById("table");
-
-                for (var i = table.rows.length; i > 1; i = table.rows.length) {
-                    table.deleteRow(i - 1);
-                }
-
-                for (var i = 0; i < data.devices.length; i++) {
-                    var row = table.insertRow(table.rows.length);
-                    row.insertCell(0).innerHTML = data.devices[i][0];
-                    row.insertCell(1).innerHTML = data.devices[i][1];
-                    row.insertCell(2).innerHTML = data.devices[i][2];
-                    row.insertCell(3).innerHTML = data.devices[i][3];
-                }
-
-                if (table.rows.length > 1)
-                    $("#newtestBtn").show();
-                else
-                    $("#newtestBtn").hide();
-            },
-            complete: function (data) {
-                // Schedule the next
-                setTimeout(doAjax, interval);
-            }
-        });
-    }
-    setTimeout(doAjax, interval);
 
 </script>
 
