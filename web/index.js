@@ -23,7 +23,7 @@ var client = -1;
 var flower_server = 'vm.hiaac.ic.unicamp.br';
 var flower_port = '8083';
 var flower_api_port = '8082';
-var algorithm_name = 'none';
+var algorithm_name = 'FedAvg';
 var algorithm_params = '{}';
 
 // parse command line args
