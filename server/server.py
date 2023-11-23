@@ -44,7 +44,9 @@ status = {'isRunning': False,
           'initial_parameters': None,
           'num_rounds': 5,
           'batch_size': 32,
-          'local_epochs': 10}
+          'local_epochs': 10,
+          'algorithm_name': 'FedAvg',
+          'algorithm_params': {}}
 
 ######
 # Display the log file when accessing the '/' path.
@@ -82,7 +84,7 @@ def get():
             content += 'body { font-family: "Courier New", monospace; }'
             content += '</style></head>'
             content += '<script> function scrollToBottom() { window.scrollTo(0, document.body.scrollHeight); } '
-            content += 'history.scrollRestoration = "manual"; '            
+            content += 'history.scrollRestoration = "manual"; '
             content += 'window.onload = scrollToBottom; </script>'
 
             for line in (file.readlines()[-1000:]):
@@ -136,6 +138,7 @@ def stop_flower():
 def run_flower():
     global status, flower_process
     log("POST to start FLOWER SERVER received")
+    log(f"POST parameters: {request.data}")
 
     if status['isRunning']:
         log("FLOWER SERVER is already running")
@@ -150,6 +153,8 @@ def run_flower():
             _min_available_clients: int = int(request.form['min_available_clients'])
             _batch_size: int = int(request.form['batch_size'])
             _local_epochs: int = int(request.form['local_epochs'])
+            _algorithm_name = request.form['algorithm_name']
+            _algorithm_params = request.form['algorithm_params']
 
             # _eval_fn = request.form['eval_fn']
             # _initial_parameters = request.form['initial_parameters']
@@ -160,7 +165,9 @@ def run_flower():
                       'min_available_clients': _min_available_clients,
                       'batch_size': _batch_size,
                       'local_epochs': _local_epochs,
-                      'num_rounds': _num_rounds}
+                      'num_rounds': _num_rounds,
+                      'algorithm_name': _algorithm_name,
+                      'algorithm_params': _algorithm_params}
 
             log(f"===## Starting FLOWER SERVER ##===")
             log(f"Starting parameters: {status}")
@@ -215,7 +222,7 @@ def start_flower_server(strategy, _num_rounds):
 #####
 def log(msg):
     now = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-    print(f"{now} {msg}")
+    print(f"{now} | {msg}")
 
     with open("./log.txt", "a") as file:
         file.write(f"{now} {msg}\n")
