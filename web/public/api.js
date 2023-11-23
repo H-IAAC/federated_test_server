@@ -13,6 +13,8 @@ function postOnFlowerServer(api_path) {
   form.append("batch_size", batch_size.value);
   form.append("local_epochs", local_epochs.value);
   form.append("num_rounds", num_rounds.value);
+  form.append("algorithm_name", algorithms_select.options[algorithms_select.selectedIndex].text);
+  form.append("algorithm_params", algorithms_select.value);
 
   req.onreadystatechange = function() {
       if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
