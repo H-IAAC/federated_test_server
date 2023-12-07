@@ -174,12 +174,11 @@ app.post("/upload", function (req, res) {
 
     // Parse form content
     form.parse(req, async function (err, fields, files) {
-
-        //console.log("-> " + fields.directory);
-        //console.log("-> " + fields.ignore);
-
-        // Uploads are sent to operating systems tmp dir by default,
-        // need to copy correct destination.
+        if (!files.file || !files.file.filepath) {
+            console.log(getDateTime() + " Missing files parameters, not file received.");
+            return;
+        }
+            
         var oldPath = files.file.filepath;
 
         // Checks if need to create a new directory
