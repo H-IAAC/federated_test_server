@@ -147,11 +147,11 @@ def run_flower():
                 # Create FedAvg strategy
                 strategy = fl.server.strategy.FedAvgAndroid(
                     fraction_fit=_fraction_fit,
-                    fraction_eval=_fraction_eval,
+                    fraction_evaluate=_fraction_eval,
                     min_fit_clients=_min_fit_clients,
-                    min_eval_clients=_min_eval_clients,
+                    min_evaluate_clients=_min_eval_clients,
                     min_available_clients=_min_available_clients,
-                    eval_fn=None,
+                    evaluate_fn=None,
                     initial_parameters=None,
                     on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
 
@@ -224,7 +224,8 @@ def flower_server(strategy, _num_rounds):
     log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
         server_address=f"0.0.0.0:{flower_server_port}",
-        config={"num_rounds": _num_rounds},
+        #config={"num_rounds": _num_rounds},
+        config=fl.server.ServerConfig(num_rounds=int(_num_rounds)),
         strategy=strategy,
     )
 

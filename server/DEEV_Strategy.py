@@ -15,8 +15,6 @@ import multiprocessing
 
 from Utils import log, check_log_size, read_log
 
-
-
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -28,10 +26,7 @@ from flwr.common import (
     FitIns,
     FitRes,
     Parameters,
-    Scalar,
-    Weights,
-    parameters_to_weights,
-    weights_to_parameters,
+    Scalar
 )
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.common.logger import log
