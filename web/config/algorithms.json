@@ -4,6 +4,12 @@
         "FedAvg": {}
       },
       {
+        "DEEV": {
+          "perc_of_clients": "0",
+          "decay": "0"
+        }
+      },
+      {
         "rawcs": {
           "maxAcceptableBatteryLevel": "100",
           "maxDesirableTrainingTime": "10",

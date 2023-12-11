@@ -6,18 +6,20 @@ import google.protobuf
 import flatbuffers
 import json
 import argparse
-from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
 import multiprocessing
 
-print(f"flwr: {fl.__version__}")
-print(f"tensorflow: {tensorflow.__version__}")
-print(f"protobuf: {google.protobuf.__version__}")
-print(f"grpcio: {grpc.__version__}")
-print(f"flatbuffers: {flatbuffers.__version__}")
+from Utils import log, check_log_size, read_log
+from DEEV_Strategy import DEEV_Strategy
+
+log(f"flwr: {fl.__version__}")
+log(f"tensorflow: {tensorflow.__version__}")
+log(f"protobuf: {google.protobuf.__version__}")
+log(f"grpcio: {grpc.__version__}")
+log(f"flatbuffers: {flatbuffers.__version__}")
 
 config = {
     'ORIGINS': [
@@ -55,42 +57,12 @@ status = {'isRunning': False,
 @app.route("/")
 @cross_origin()
 def get():
-    content = "No log content to display."
-
     if not os.path.exists("./log.txt"):
-        return content
+        return "No log content to display."
     else:
-        with open("./log.txt", 'r+') as file:
-            # read an store all lines into list
-            lines = file.readlines()
+        check_log_size()
 
-            #print(f"-> {len(lines)}")
-
-            # Remove initial file lines, when it has more than 5000 log lines
-            if len(lines) > 5000:
-                print(f"-> removing log lines")
-                # move file pointer to the beginning of a file
-                file.seek(0)
-                # truncate the file
-                file.truncate()
-                # start writing lines except the first line
-                # lines[2500:] from line 2501 to last line
-                file.writelines(lines[2500:])
-
-            # loop to read iterate
-            # last 1000 lines and print it
-            file.seek(0)
-            content = '<head><style>'
-            content += 'body { font-family: "Courier New", monospace; }'
-            content += '</style></head>'
-            content += '<script> function scrollToBottom() { window.scrollTo(0, document.body.scrollHeight); } '
-            content += 'history.scrollRestoration = "manual"; '
-            content += 'window.onload = scrollToBottom; </script>'
-
-            for line in (file.readlines()[-1000:]):
-                content += line + "</br>"
-
-    return content
+    return read_log()
 
 
 ######
@@ -136,9 +108,8 @@ def stop_flower():
 @app.route('/run', methods=['POST'])
 @cross_origin()
 def run_flower():
-    global status, flower_process
+    global status
     log("POST to start FLOWER SERVER received")
-    log(f"POST parameters: {request.data}")
 
     if status['isRunning']:
         log("FLOWER SERVER is already running")
@@ -169,45 +140,86 @@ def run_flower():
                       'algorithm_name': _algorithm_name,
                       'algorithm_params': _algorithm_params}
 
-            log(f"===## Starting FLOWER SERVER ##===")
-            log(f"Starting parameters: {status}")
 
-            # Create strategy
-            strategy = fl.server.strategy.FedAvgAndroid(
-                fraction_fit=_fraction_fit,
-                fraction_eval=_fraction_eval,
-                min_fit_clients=_min_fit_clients,
-                min_eval_clients=_min_eval_clients,
-                min_available_clients=_min_available_clients,
-                eval_fn=None,
-                initial_parameters=None,
-                on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
+            # Strategy - FedAvg
+            if _algorithm_name == 'FedAvg':
+                log("  Using FedAvg strategy")
+                # Create FedAvg strategy
+                strategy = fl.server.strategy.FedAvgAndroid(
+                    fraction_fit=_fraction_fit,
+                    fraction_eval=_fraction_eval,
+                    min_fit_clients=_min_fit_clients,
+                    min_eval_clients=_min_eval_clients,
+                    min_available_clients=_min_available_clients,
+                    eval_fn=None,
+                    initial_parameters=None,
+                    on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
 
-            # create a new process
-            flower_process = Process(target=start_flower_server, args=(strategy, _num_rounds))
+            # Strategy - DEEV
+            elif _algorithm_name == 'DEEV':
+                log("  Using DEEV strategy")
 
-            # start the process
-            flower_process.start()
+                parameters = json.loads(_algorithm_params)
+                decay = (parameters["decay"])
+                perc_of_clients = (parameters["perc_of_clients"])
 
-            # wait for the process to finish
-            flower_process.join()
+                log(f"DEEV decay: {decay} perc_of_clients {perc_of_clients}")
 
-            log("===## FLOWER SERVER is now disabled ##===")
+                # Create DEEV strategy
+                strategy =  DEEV_Strategy(_algorithm_name, 
+                                          _fraction_fit,
+                                          _min_available_clients, 
+                                          float(decay),
+                                          float(perc_of_clients)
+                                          #dataset            = os.environ['DATASET'],
+                                          #model_name         = os.environ['MODEL'])
+                                        )
+
+            # Strategy - RAWCS
+            elif _algorithm_name == 'rawcs':
+                log("  RAWCS strategy not implemented")
+                return jsonify(status="fail", reason=f"RAWCS strategy not implemented")
+
+            else:
+                log(f"Invalid aggregation_method received: {_algorithm_name}")
+                return jsonify(status="fail", reason=f"Invalid aggregation_method received: {_algorithm_name}")
+
+            # Start Flower server execution
+            start(strategy, _num_rounds)
 
         except Exception as e:
-            log(f"Invalid request, exception: {e}")
-            return jsonify(status="fail", reason=f"Invalid request, exception: {e}.")
+            log(f"Flower start failed!! Exception: {e}")
+            return jsonify(status="fail", reason=f"Flower start failed!! Exception: {e}.")
 
         finally:
             status['isRunning'] = False
 
-    return jsonify(status="success", reason=f"Flower execution finished.")
+    return jsonify(status="success", reason=f"{_algorithm_name} execution finished.")
 
 ######
-# Starts/Run flower server.
+# Start server.
 #
 #####
-def start_flower_server(strategy, _num_rounds):
+def start(strategy, _num_rounds):
+    global flower_process
+    log(f"===## Starting Flower Server\n                      with parameters: {status}")
+
+    # create a new process
+    flower_process = Process(target=flower_server, args=(strategy, _num_rounds))
+
+    # start the process
+    flower_process.start()
+
+    # wait for the process to finish
+    flower_process.join()
+
+    log("===## FLOWER SERVER is now disabled ##===")
+
+######
+# function used to run flower server process.
+#
+#####
+def flower_server(strategy, _num_rounds):
     # Start Flower server for 10 rounds of federated learning
     log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
@@ -215,18 +227,6 @@ def start_flower_server(strategy, _num_rounds):
         config={"num_rounds": _num_rounds},
         strategy=strategy,
     )
-
-######
-# Log message to default output.
-#
-#####
-def log(msg):
-    now = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-    print(f"{now} | {msg}")
-
-    with open("./log.txt", "a") as file:
-        file.write(f"{now} {msg}\n")
-
 
 ######
 # Main.
