@@ -127,7 +127,7 @@ def run_flower():
             _algorithm_name = request.form['algorithm_name']
             _algorithm_params = request.form['algorithm_params']
 
-            # _eval_fn = request.form['eval_fn']
+            _eval_fn = None
             # _initial_parameters = request.form['initial_parameters']
 
             status = {'isRunning': True,
@@ -147,11 +147,11 @@ def run_flower():
                 # Create FedAvg strategy
                 strategy = fl.server.strategy.FedAvgAndroid(
                     fraction_fit=_fraction_fit,
-                    fraction_evaluate=_fraction_eval,
+                    fraction_eval=_fraction_eval,
                     min_fit_clients=_min_fit_clients,
-                    min_evaluate_clients=_min_eval_clients,
+                    min_eval_clients=_min_eval_clients,
                     min_available_clients=_min_available_clients,
-                    evaluate_fn=None,
+                    eval_fn=None,
                     initial_parameters=None,
                     on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
 
@@ -167,10 +167,14 @@ def run_flower():
 
                 # Create DEEV strategy
                 strategy =  DEEV_Strategy(_algorithm_name, 
-                                          _fraction_fit,
-                                          _min_available_clients, 
-                                          float(decay),
-                                          float(perc_of_clients)
+                                          fraction_fit=_fraction_fit,
+                                          fraction_eval=_fraction_eval,
+                                          min_fit_clients=int(_min_fit_clients),
+                                          min_eval_clients=int(_min_eval_clients),
+                                          min_available_clients=int(_min_available_clients),
+                                          eval_fn=None,
+                                          decay=float(decay),
+                                          perc_of_clients=float(perc_of_clients)
                                           #dataset            = os.environ['DATASET'],
                                           #model_name         = os.environ['MODEL'])
                                         )
@@ -224,8 +228,8 @@ def flower_server(strategy, _num_rounds):
     log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
         server_address=f"0.0.0.0:{flower_server_port}",
-        #config={"num_rounds": _num_rounds},
-        config=fl.server.ServerConfig(num_rounds=int(_num_rounds)),
+        config={"num_rounds": _num_rounds},
+        #config=fl.server.ServerConfig(num_rounds=int(_num_rounds)),
         strategy=strategy,
     )
 
