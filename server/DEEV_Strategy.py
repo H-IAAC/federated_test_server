@@ -34,7 +34,7 @@ from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.common.logger import log
 
 class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
-    def __init__(self, aggregation_method, fraction_fit, fraction_eval, min_fit_clients, min_eval_clients, min_available_clients, eval_fn, decay, perc_of_clients):
+    def __init__(self, aggregation_method, fraction_fit, fraction_eval, min_fit_clients, min_eval_clients, min_available_clients, eval_fn, initial_parameters, on_fit_config_fn, decay, perc_of_clients):
         print(f"DEEV_Strategy init")
 
         self.aggregation_method = aggregation_method
@@ -83,6 +83,9 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
         self.eval_fn=eval_fn
 
+        self.initial_parameters = initial_parameters
+        self.on_fit_config_fn = on_fit_config_fn
+
     ###### Referent to original code from version 0.18.0
     #def configure_fit(
     #    self, rnd: int, parameters: Parameters, client_manager: ClientManager
@@ -118,14 +121,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
                 the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
                 self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
 
-        self.clients_last_round = self.selected_clients
-        
-        config = {
-            "selected_clients" : ' '.join(self.selected_clients),
-            "round"            : rnd
-            }
+        config = {}
+        if self.on_fit_config_fn is not None:
+            # Custom fit config function provided
+            config = self.on_fit_config_fn(rnd)
 
         fit_ins = FitIns(parameters, config)
+
+        #self.clients_last_round = self.selected_clients
 
         # Sample clients
         sample_size, min_num_clients = self.num_fit_clients(

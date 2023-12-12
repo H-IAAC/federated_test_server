@@ -173,6 +173,8 @@ def run_flower():
                                           min_eval_clients=int(_min_eval_clients),
                                           min_available_clients=int(_min_available_clients),
                                           eval_fn=None,
+                                          initial_parameters=None,
+                                          on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs },
                                           decay=float(decay),
                                           perc_of_clients=float(perc_of_clients)
                                           #dataset            = os.environ['DATASET'],
