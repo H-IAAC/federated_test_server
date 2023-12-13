@@ -8,38 +8,46 @@ h1 {
 
 h2 {
     text-indent: 100px;
+    text-align: left;
 }
 
 button {
-    font-weight: bold;
-    margin-bottom: 20px;
-    top: 50%;
-    background-color: #d8a61d;
+    margin: 10px 5px 10px 5px;
+    background-color: #ff9d1c;
     color: #fff;
     border: none;
-    border-radius: 10px;
-    padding: 15px;
-    min-height: 30px;
-    min-width: 120px;
+    min-height: 35px;
+    min-width: 135px;
 }
 
 select {
     font-weight: bold;
     padding-left: 50px;
     border: revert;
-    border-color: orange;
-    border-radius: 10px;
+    border-color: #ff9d1c;
     min-height: 30px;
 }
 
 label {
     min-height: 30px;
+    margin-left: 15px;
 }
 
-.setup {
+input {
+    width: 100%;
+}
+
+.setup-android {
     display: block;
     margin: 0px 150px;
+    text-align: left;
 }
+
+.setup-flower {
+    display: block;
+    margin: 0px 75px;
+}
+
 
 .devices {
     display: block;
@@ -65,7 +73,7 @@ label {
     padding-top: 12px;
     padding-bottom: 12px;
     text-align: left;
-    background-color: #d8a61d;
+    background-color: #ff9d1c;
     color: white;
   }
 
@@ -83,4 +91,27 @@ body {
 ul {
     margin: 0;
     padding: 0;
+}
+
+.grid-container-setup {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 20px;
+}
+
+.grid-child {
+    text-align: right;
+}
+
+.grid-container-flower {
+    display: grid;
+    grid-template-columns:  1fr 1.5fr 1fr 1.5fr 1fr 1.5fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    column-gap: 6px;
+    row-gap: 10px;
+}
+
+.grid-select {
+    text-align: left;
+    margin: 30px 10px 20px 10px;
 }
