@@ -220,7 +220,7 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def aggregate_fit(self, rnd: int, results: List[Tuple[ClientProxy, FitRes]], failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
 
-        print(f"aggregate_fit")
+        print(f"aggregate_fit init")
 
         if not results:
             return None, {}
@@ -234,13 +234,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             for client, fit_res in results
         ]
 
-        print(f'LEN AGGREGATED PARAMETERS: {len(weights_results)}')
+        print(f"LEN AGGREGATED PARAMETERS: {len(weights_results)}")
         #parameters_aggregated = weights_to_parameters(aggregate(weights_results))
 
         # Aggregate custom metrics if aggregation fn was provided
         #metrics_aggregated = {}
 
         #return parameters_aggregated, metrics_aggregated
+        print(f"aggregate_fit end")
         return self.weights_to_parameters(aggregate(weights_results)), {}
 
     ###### Referent to original code from version 0.18.0
@@ -275,51 +276,58 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
 
+        print(f"aggregate_evaluate init")
+
         if not results:
+            print(f"aggregate_evaluate no 'results', returning...")
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
         if not self.accept_failures and failures:
+            print(f"aggregate_evaluate there are failures, returning...")            
             return None, {}
 
-        #local_list_clients      = []
-        #self.list_of_clients    = []
-        #self.list_of_accuracies = []
-        #accs                    = []
-        
-        #for response in results:
-        #    client_id       = response[1].metrics['cid']
-        #    client_accuracy = float(response[1].metrics['accuracy'])
-        #    client_trans    = float(response[1].metrics['transmittion_prob'])
-        #    client_cputime  = float(response[1].metrics['cpu_cost'])
-        #    client_battery  = float(response[1].metrics['battery'])
+        local_list_clients      = []
+        self.list_of_clients    = []
+        self.list_of_accuracies = []
+        accs                    = []
+        self.acc = []
+		
+        for response in results:
+            #print(f"client: {response[0].cid}")
+            client_id       = response[0].cid
+            client_accuracy = float(response[1].metrics['Accuracy'])
+            #client_trans    = float(response[1].metrics['transmittion_prob'])
+            #client_cputime  = float(response[1].metrics['cpu_cost'])
+            #client_battery  = float(response[1].metrics['battery'])
+            #filename = f"logs/{self.solution_name}/pareto.csv"
+            #os.makedirs(os.path.dirname(filename), exist_ok=True)
+    
+            #with open(filename, 'a') as pareto_file:
+                #pareto_file.write(f"{server_round}, {client_id}, {client_accuracy}, {client_trans}, {client_cputime}, {client_battery}\n")
+    
+            accs.append(client_accuracy)
+    
+            local_list_clients.append((client_id, client_accuracy))
+    
+        local_list_clients.sort(key=lambda x: x[1])
 
-        #    filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/pareto.csv"
-        #    os.makedirs(os.path.dirname(filename), exist_ok=True)
+        self.list_of_clients    = [str(client[0]) for client in local_list_clients]
+        self.list_of_accuracies = [float(client[1]) for client in local_list_clients]
 
-        #    with open(filename, 'a') as pareto_file:
-        #        pareto_file.write(f"{rnd}, {client_id}, {client_accuracy}, {client_trans}, {client_cputime}, {client_battery}\n")
+        self.acc = accs.copy()
 
-        #    accs.append(client_accuracy)
-
-        #    local_list_clients.append((client_id, client_accuracy))
-
-        #local_list_clients.sort(key=lambda x: x[1])
-
-        #self.list_of_clients    = [str(client[0]) for client in local_list_clients]
-        #self.list_of_accuracies = [float(client[1]) for client in local_list_clients]
-
-        #accs.sort()
-        #self.average_accuracy   = np.mean(accs)
+        accs.sort()
+        self.average_accuracy   = np.mean(accs)
 
         # Weigh accuracy of each client by number of examples used
-        #accuracies = [r.metrics["accuracy"] * r.num_examples for _, r in results]
-        #examples   = [r.num_examples for _, r in results]
+        accuracies = [float(r.metrics["Accuracy"]) * r.num_examples for _, r in results]
+        examples   = [r.num_examples for _, r in results]
 
         # Aggregate and print custom metric
-        #accuracy_aggregated = sum(accuracies) / sum(examples)
-        #current_accuracy    = accuracy_aggregated
+        accuracy_aggregated = sum(accuracies) / sum(examples)
+        current_accuracy    = accuracy_aggregated
 
-        #print(f"Round {rnd} accuracy aggregated from client results: {accuracy_aggregated}")
+        print(f"Round {rnd} accuracy aggregated from client results: {accuracy_aggregated}")
 
         # Aggregate loss
         loss_aggregated = weighted_loss_avg(
@@ -334,24 +342,23 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         )
 
         # Aggregate custom metrics if aggregation fn was provided
-        #top5 = np.mean(accs[-5:])
-        #top1 = accs[-1]
+        top5 = np.mean(accs[-5:])
+        top1 = accs[-1]
 
         #filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/server.csv"
         #os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         #with open(filename, 'a') as server_log_file:
-        #    server_log_file.write(f"{time.time()}, {rnd}, {accuracy_aggregated}, {top5}, {top1}\n")
+        #    server_log_file.write(f"{time.time()}, {server_round}, {accuracy_aggregated}, {top5}, {top1}\n")
 
-        #metrics_aggregated = { 
-        #    "accuracy"  : accuracy_aggregated,
-        #    "top-5"     : top5,
-        #    "top-1"     : top1
-        #}
-
-    
-        #return loss_aggregated, metrics_aggregated
-        return loss_aggregated, {}
+        metrics_aggregated = { 
+            "accuracy"  : accuracy_aggregated,
+            "top-5"     : top5,
+            "top-1"     : top1
+        }
+	
+        print(f"aggregate_evaluate end")
+        return loss_aggregated, metrics_aggregated
 
     def select_clients_bellow_average(self):
         selected_clients = []
