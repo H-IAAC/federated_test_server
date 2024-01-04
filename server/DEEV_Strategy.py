@@ -1,19 +1,12 @@
 import flwr as fl
 import numpy as np
-import math
 import os
 import time
-import os
-import flwr as fl
-import tensorflow
-import grpc
-import google.protobuf
-import flatbuffers
-import json
-import argparse
-import multiprocessing
+import math
 
 from Utils import log, check_log_size, read_log
+
+from server_utils import sample
 
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
@@ -60,7 +53,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
         #FedLTA
         self.decay_factor = decay
-
 
         super().__init__()
 
@@ -121,14 +113,18 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
                 the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
                 self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
 
-        config = {}
-        if self.on_fit_config_fn is not None:
-            # Custom fit config function provided
-            config = self.on_fit_config_fn(rnd)
+        self.clients_last_round = self.selected_clients
+
+        #config = {}
+        #if self.on_fit_config_fn is not None:
+        #    # Custom fit config function provided
+        #    config = self.on_fit_config_fn(rnd)
+        config = {
+            "selected_clients" : ' '.join(self.selected_clients),
+            "round"            : rnd
+            }
 
         fit_ins = FitIns(parameters, config)
-
-        #self.clients_last_round = self.selected_clients
 
         # Sample clients
         sample_size, min_num_clients = self.num_fit_clients(
@@ -140,7 +136,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
         # Return client/config pairs
         return [(client, fit_ins) for client in clients]
-
 
 
     ###### Referent to original code from version 0.18.0
@@ -220,8 +215,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def aggregate_fit(self, rnd: int, results: List[Tuple[ClientProxy, FitRes]], failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
 
-        print(f"aggregate_fit init")
-
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -234,15 +227,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             for client, fit_res in results
         ]
 
-        print(f"LEN AGGREGATED PARAMETERS: {len(weights_results)}")
+        print(f'LEN AGGREGATED PARAMETERS: {len(weights_results)}')
         #parameters_aggregated = weights_to_parameters(aggregate(weights_results))
 
         # Aggregate custom metrics if aggregation fn was provided
-        #metrics_aggregated = {}
+        metrics_aggregated = {}
 
         #return parameters_aggregated, metrics_aggregated
-        print(f"aggregate_fit end")
-        return self.weights_to_parameters(aggregate(weights_results)), {}
+        return self.weights_to_parameters(aggregate(weights_results)), metrics_aggregated
 
     ###### Referent to original code from version 0.18.0
     #def aggregate_evaluate(
@@ -276,8 +268,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
 
-        print(f"aggregate_evaluate init")
-
         if not results:
             print(f"aggregate_evaluate no 'results', returning...")
             return None, {}
@@ -291,7 +281,7 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         self.list_of_accuracies = []
         accs                    = []
         self.acc = []
-		
+        
         for response in results:
             #print(f"client: {response[0].cid}")
             client_id       = response[0].cid
@@ -356,8 +346,7 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             "top-5"     : top5,
             "top-1"     : top1
         }
-	
-        print(f"aggregate_evaluate end")
+    
         return loss_aggregated, metrics_aggregated
 
     def select_clients_bellow_average(self):
