@@ -10,6 +10,8 @@ from server_utils import sample
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
 
+from flwr.server.client_manager import ClientManager
+from flwr.server.client_proxy import ClientProxy
 from flwr.common import (
     EvaluateIns,
     EvaluateRes,
@@ -19,8 +21,6 @@ from flwr.common import (
     Scalar,
     Weights
 )
-from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
-from flwr.common.logger import log
 
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.common.logger import log
@@ -235,17 +235,26 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
     def aggregate_evaluate(
         self,
-        server_round,
-        results,
-        failures,
-    ):
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[BaseException],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+
+        log(f"aggregate_evaluate init")
+
+        if not results:
+            log(f"aggregate_evaluate no 'results', returning...")
+            return None, {}
+        # Do not aggregate if there are failures and failures are not accepted
+        if not self.accept_failures and failures:
+            log(f"aggregate_evaluate there are failures, returning...")            
+            return None, {}
 
         local_list_clients      = []
         self.list_of_clients    = []
         self.list_of_accuracies = []
         accs                    = []
         self.acc = []
-
 		
         for response in results:
             #client_id       = response[1].metrics['cid']
@@ -286,7 +295,10 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         # Aggregate loss
         loss_aggregated = weighted_loss_avg(
             [
-                (evaluate_res.num_examples, evaluate_res.loss)
+                (
+                    evaluate_res.num_examples,
+                    evaluate_res.loss
+                )
                 for _, evaluate_res in results
             ]
         )
@@ -295,11 +307,11 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         top5 = np.mean(accs[-5:])
         top1 = accs[-1]
 
-        filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/server.csv"
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        #filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/server.csv"
+        #os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-        with open(filename, 'a') as server_log_file:
-            server_log_file.write(f"{time.time()}, {server_round}, {accuracy_aggregated}, {top5}, {top1}\n")
+        #with open(filename, 'a') as server_log_file:
+        #    server_log_file.write(f"{time.time()}, {server_round}, {accuracy_aggregated}, {top5}, {top1}\n")
 
         metrics_aggregated = { 
             "accuracy"  : accuracy_aggregated,
@@ -308,6 +320,7 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         }
 
 	
+        log(f"aggregate_evaluate end")
         return loss_aggregated, metrics_aggregated
 
 
