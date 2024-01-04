@@ -96,9 +96,4 @@ def sample(
         if selection == 'All':
             sampled_cids = random.sample(available_cids, num_clients)  
 
-
-<<<<<<< HEAD
         return [clients[cid] for cid in sampled_cids]   
-=======
-        return [clients[cid] for cid in sampled_cids]
->>>>>>> HIAACF3-269
