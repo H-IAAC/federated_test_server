@@ -80,6 +80,9 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
         self.initial_parameters = initial_parameters
 
+        # Dictionary of type cid:accuracy
+        self.clients = {}
+
     ###### Referent to original code from version 0.18.0
     #def configure_fit(
     #    self, rnd: int, parameters: Parameters, client_manager: ClientManager
@@ -109,11 +112,13 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             self.selected_clients = self.list_of_clients[:clients2select]
 
         elif self.aggregation_method == 'DEEV':
-            self.selected_clients = self.select_clients_bellow_average()
+            self.selected_clients = self.select_clients_bellow_average(self.average_accuracy)
 
             if self.decay_factor > 0:
                 the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
                 self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
+
+        print(f"Round {rnd}\tNumber of selected clientes = {len(self.selected_clients)}")
 
         self.clients_last_round = self.selected_clients
         
@@ -227,7 +232,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             for client, fit_res in results
         ]
 
-        print(f'LEN AGGREGATED PARAMETERS: {len(weights_results)}')
         #parameters_aggregated = weights_to_parameters(aggregate(weights_results))
 
         # Aggregate custom metrics if aggregation fn was provided
@@ -276,14 +280,11 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             print(f"aggregate_evaluate there are failures, returning...")            
             return None, {}
 
-        local_list_clients      = []
-        self.list_of_clients    = []
-        self.list_of_accuracies = []
-        accs                    = []
+        accs = []
         self.acc = []
-        
+        clients = {}
+
         for response in results:
-            #print(f"client: {response[0].cid}")
             client_id       = response[0].cid
             client_accuracy = float(response[1].metrics['Accuracy'])
             #client_trans    = float(response[1].metrics['transmittion_prob'])
@@ -297,17 +298,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     
             accs.append(client_accuracy)
     
-            local_list_clients.append((client_id, client_accuracy))
+            clients[client_id] = client_accuracy
     
-        local_list_clients.sort(key=lambda x: x[1])
-
-        self.list_of_clients    = [str(client[0]) for client in local_list_clients]
-        self.list_of_accuracies = [float(client[1]) for client in local_list_clients]
+        self.clients = dict(sorted(clients.items(), key=lambda item: item[1]))
 
         self.acc = accs.copy()
 
         accs.sort()
-        self.average_accuracy   = np.mean(accs)
+        self.average_accuracy = np.mean(accs)
 
         # Weigh accuracy of each client by number of examples used
         accuracies = [float(r.metrics["Accuracy"]) * r.num_examples for _, r in results]
@@ -349,13 +347,12 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     
         return loss_aggregated, metrics_aggregated
 
-    def select_clients_bellow_average(self):
+    def select_clients_bellow_average(self, average_accuracy):
         selected_clients = []
 
-        for idx_accuracy in range(len(self.list_of_accuracies)):
-
-            if self.list_of_accuracies[idx_accuracy] < self.average_accuracy:
-                selected_clients.append(self.list_of_clients[idx_accuracy])
+        for item in self.clients.items():
+            if item[1] < average_accuracy:
+                selected_clients.append(item[0])
 
         return selected_clients
 
