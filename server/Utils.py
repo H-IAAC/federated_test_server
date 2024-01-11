@@ -65,6 +65,8 @@ def read_log():
 def post_request(url, directory, file_path):
     log(f"Post file {file_path} to {url}")
 
+
+
     if Path(file_path).is_file():
         log(f"{file_path} exists, uploading...")
     else:
@@ -73,7 +75,7 @@ def post_request(url, directory, file_path):
 
     fields = {
             'directory': directory,
-            "file": ("file", open(file_path).read()),
+            'file': (Path(file_path).name, open(file_path).read()),
     }
 
     # Post request as multipart form data

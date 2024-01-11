@@ -256,7 +256,7 @@ def send_result(strategy):
     file_path = strategy.get_result_file()
 
     # Define the directory name in the server
-    directory = strategy_name + '_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    directory = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + strategy_name
 
     # Post the file
     post_request(url, directory, file_path)

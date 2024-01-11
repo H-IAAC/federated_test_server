@@ -1,6 +1,7 @@
 import flwr as fl
 import numpy as np
-import io
+import os
+import csv
 import math
 
 from Utils import log, check_log_size, read_log
@@ -84,6 +85,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         # Dictionary of type cid:accuracy
         self.clients = {}
 
+        # define csv path
+        self.csv_path = f'{os.sep}tmp{os.sep}selected_clientes.csv'
+        if os.path.exists(self.csv_path):
+            os.remove(self.csv_path)
+
+        with open(self.csv_path, 'w', encoding='UTF8') as f:
+            csv.writer(f, quoting=csv.QUOTE_ALL).writerow(['round','clients'])
+
     ###### Referent to original code from version 0.18.0
     #def configure_fit(
     #    self, rnd: int, parameters: Parameters, client_manager: ClientManager
@@ -108,18 +117,17 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
     def configure_fit(self, rnd, parameters, client_manager):
         """Configure the next round of training."""
-        if self.aggregation_method == 'POC':
-            clients2select        = int(float(self.num_clients) * float(self.perc_of_clients))
-            self.selected_clients = self.list_of_clients[:clients2select]
+        self.selected_clients = self.select_clients_bellow_average(self.average_accuracy)
 
-        elif self.aggregation_method == 'DEEV':
-            self.selected_clients = self.select_clients_bellow_average(self.average_accuracy)
+        if self.decay_factor > 0:
+            the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
+            self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
 
-            if self.decay_factor > 0:
-                the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
-                self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
+        print(f"Round {rnd}\tNumber of selected clients = {len(self.selected_clients)}")
 
-        print(f"Round {rnd}\tNumber of selected clientes = {len(self.selected_clients)}")
+        with open(self.csv_path, 'a', encoding='UTF8') as f:
+            data = [rnd] + self.selected_clients
+            csv.writer(f, quoting=csv.QUOTE_ALL).writerow(data)
 
         self.clients_last_round = self.selected_clients
         
@@ -367,9 +375,9 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         return [self.bytes_to_ndarray(tensor) for tensor in parameters.tensors]
 
     def get_result_file(self) -> str:
-        temp_file = open("/tmp/temporary.txt", "w")
-        temp_file.write('temporary to test flower DEEV execution.')
-        temp_file.close()
+        #temp_file = open("/tmp/temporary.txt", "w")
+        #temp_file.write('temporary to test flower DEEV execution.')
+        #temp_file.close()
 
         # Return the path to the result file
-        return '/tmp/temporary.txt'
+        return self.csv_path
