@@ -19,6 +19,7 @@ flask-cors = "3.0.10"
 grpcio = "1.43.0"
 tensorflow = "2.11"
 tensorboard = "2.11"
+requests = "2.31.0"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

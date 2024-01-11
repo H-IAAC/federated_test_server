@@ -1,7 +1,6 @@
 import flwr as fl
 import numpy as np
-import os
-import time
+import io
 import math
 
 from Utils import log, check_log_size, read_log
@@ -29,6 +28,8 @@ from flwr.common.logger import log
 class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def __init__(self, aggregation_method, fraction_fit, fraction_eval, min_fit_clients, min_eval_clients, min_available_clients, eval_fn, initial_parameters, decay, perc_of_clients, local_epochs, batch_size):
         print(f"DEEV_Strategy init")
+
+        self.__name__ = 'DEEV'
 
         self.aggregation_method = aggregation_method
         self.num_clients        = min_available_clients
@@ -364,3 +365,11 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def parameters_to_weights(self, parameters: Parameters) -> Weights:
         """Convert parameters object to NumPy weights."""
         return [self.bytes_to_ndarray(tensor) for tensor in parameters.tensors]
+
+    def get_result_file(self) -> str:
+        temp_file = open("/tmp/temporary.txt", "w")
+        temp_file.write('temporary to test flower DEEV execution.')
+        temp_file.close()
+
+        # Return the path to the result file
+        return '/tmp/temporary.txt'

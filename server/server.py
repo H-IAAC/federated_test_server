@@ -11,8 +11,9 @@ from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
 import multiprocessing
+from datetime import datetime
 
-from Utils import log, check_log_size, read_log
+from Utils import log, check_log_size, read_log, post_request
 from DEEV_Strategy import DEEV_Strategy
 
 log(f"flwr: {fl.__version__}")
@@ -166,7 +167,7 @@ def run_flower():
                 log(f"DEEV decay: {decay} perc_of_clients {perc_of_clients}")
 
                 # Create DEEV strategy
-                strategy =  DEEV_Strategy(_algorithm_name, 
+                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
                                           fraction_fit=_fraction_fit,
                                           fraction_eval=_fraction_eval,
                                           min_fit_clients=int(_min_fit_clients),
@@ -220,19 +221,54 @@ def start(strategy, _num_rounds):
     # wait for the process to finish
     flower_process.join()
 
+    send_result(strategy)
+
     log("===## FLOWER SERVER is now disabled ##===")
+
+######
+# Start server.
+#
+#####
+def send_result(strategy):
+    # Upload will only be execution when strategy class has the 'get_result_file' function.
+    try:
+        callable(strategy.get_result_file)
+    except:
+        log(f'Uploading result ignore!. The selected strategy {strategy.__class__.__name__} is missing the get_result_file() function.')
+        return
+
+    # Determine the port from server
+    if server_port == '8072':
+        url_port = 8070
+    elif server_port == '8082':
+        url_port = 8090
+    else:
+        log(f'Failed to upload result. Unknown web server port based on {server_port} port')
+        return
+
+    url = f'http://vm.hiaac.ic.unicamp.br:{url_port}/upload'
+
+    strategy_name = strategy.__class__.__name__
+    if hasattr(strategy, '__name__'):
+        strategy_name = strategy.__name__
+
+    # Get the path to the file to be uploaded
+    file_path = strategy.get_result_file()
+
+    # Define the directory name in the server
+    directory = strategy_name + '_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+    # Post the file
+    post_request(url, directory, file_path)
 
 ######
 # function used to run flower server process.
 #
 #####
 def flower_server(strategy, _num_rounds):
-    # Start Flower server for 10 rounds of federated learning
-    log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
         server_address=f"0.0.0.0:{flower_server_port}",
         config={"num_rounds": _num_rounds},
-        #config=fl.server.ServerConfig(num_rounds=int(_num_rounds)),
         strategy=strategy,
     )
 
