@@ -269,18 +269,33 @@
     }
 
     function startFlowerServer() {
-        // Save parameters from this execution
-        setConfiguration();
 
-        // Call api to start flower execution
-        postOnFlowerServer('/run');
+    fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (!data.isRunning) {
+                // Save parameters from this execution
+                setConfiguration();
 
-        // After send the request, get a new status after 3 sec.
-        setTimeout(function() {
-            getFlowerStatus();
-        }, 3000);
+                // Call api to start flower execution
+                postOnFlowerServer('/run');
 
-        flower_status.innerHTML = "Flower server starting.";
+                // After send the request, get a new status after 3 sec.
+                setTimeout(function() {
+                    getFlowerStatus();
+                }, 3000);
+
+                flower_status.innerHTML = "Flower server starting.";
+            } else {
+                flower_status.innerHTML = "Flower server is already running.";
+            }
+        })
+        .catch(error => {
+            //
+            flower_status.innerHTML = error.message;
+        });
     }
 
 </script>
