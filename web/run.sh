@@ -36,7 +36,7 @@ help () {
 
 case $1 in
     status) status ;;
-    start) start $3 ;;
+    start) start $2 ;;
     stop) stop ;;
     *) help ;;
 esac

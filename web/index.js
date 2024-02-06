@@ -25,6 +25,7 @@ var flower_port = '8083';
 var flower_api_port = '8082';
 var algorithm_name = 'FedAvg';
 var algorithm_params = '{}';
+var flower_start_timestamp = '';
 
 // parse command line args
 const args = process.argv.slice(2);
@@ -79,6 +80,7 @@ app.listen(serverPort, function () {
  * Change the 'fold' value returned on 'getConfig'
  */
 app.post("/setConfig", function (req, res) {
+    flower_start_timestamp = algorithm_name + '__' + utils.get_timestamp();
     fold = req.body.fold;
     flower_server = req.body.flower_url;
     flower_port = req.body.flower_port;
@@ -122,12 +124,15 @@ app.get("/getDevices", function (req, res) {
  */
 app.get("/getConfig", function (req, res) {
     client++;
-    res.json({ fold: fold, client: client,
+
+    res.json({ fold: fold,
+               client: client,
                flower_server: flower_server,
                flower_port: flower_port,
                flower_api_port: flower_api_port,
+               server_directory: flower_start_timestamp,
                algorithm_name: algorithm_name,          // algorithm name, selected by the user
-               algorithm_params: algorithm_params});    // the algorithm entered by the user
+               algorithm_params: algorithm_params});    // the algorithm params entered by the user
 });
 
 /**

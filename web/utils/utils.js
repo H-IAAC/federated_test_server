@@ -1,5 +1,6 @@
-const fs = require('fs'),
-      consts = require('../utils/consts');
+const fs = require('fs');
+const date = require('date-and-time');
+consts = require('../utils/consts');
 
 module.exports = {
     /**
@@ -14,5 +15,13 @@ module.exports = {
 
         console.log("ERROR! Missing config file: " + consts.CONFIG_FILE_PATH);
         return {};
+    },
+
+    /**
+     * @return string           Return current timestamp
+     */
+    get_timestamp: function () {
+        const now  =  new Date();
+        return date.format(now,'YYYYMMDD_HHmmss');
     }
 }
