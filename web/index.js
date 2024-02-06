@@ -80,7 +80,7 @@ app.listen(serverPort, function () {
  * Change the 'fold' value returned on 'getConfig'
  */
 app.post("/setConfig", function (req, res) {
-    flower_start_timestamp = algorithm_name + '__' + utils.get_timestamp();
+    flower_start_timestamp = req.body.algorithm_name + '__' + utils.get_timestamp();
     fold = req.body.fold;
     flower_server = req.body.flower_url;
     flower_port = req.body.flower_port;
