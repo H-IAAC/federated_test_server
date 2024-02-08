@@ -244,17 +244,36 @@
         });
     }
 
+    function pad2(n) {
+        return n < 10 ? '0' + n : n
+    }
+
+    function getTimestamp() {
+        let date = new Date();
+        return date.getFullYear().toString() +
+                        pad2(date.getMonth() + 1) +
+                        pad2(date.getDate()) +
+                        pad2(date.getHours()) +
+                        pad2(date.getMinutes()) +
+                        pad2(date.getSeconds());
+    }
+
     // Send configuration parameters to the server
     function setConfiguration() {
         // Get values from algorithm options
         let current_algorithm_config = get(JSON.parse(algorithms_select.value));
 
+        let server_upload_directory = algorithms_select.options[algorithms_select.selectedIndex].text + '__' + getTimestamp();
+
         post('/setConfig/', { fold: fold.value,
+                              server_directory: server_upload_directory,
                               flower_url: flower_url.value,
                               flower_port: flower_port.value,
                               flower_api_port: flower_api_port.value,
                               algorithm_name: algorithms_select.options[algorithms_select.selectedIndex].text,
                               algorithm_params: JSON.stringify(current_algorithm_config) });
+
+        return server_upload_directory;
     }
 
     function goToLogs() {
@@ -270,32 +289,32 @@
 
     function startFlowerServer() {
 
-    fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (!data.isRunning) {
-                // Save parameters from this execution
-                setConfiguration();
+        fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (!data.isRunning) {
+                    // Save parameters from this execution
+                    let server_upload_directory = setConfiguration();
 
-                // Call api to start flower execution
-                postOnFlowerServer('/run');
+                    // Call api to start flower execution
+                    postOnFlowerServer('/run', server_upload_directory);
 
-                // After send the request, get a new status after 3 sec.
-                setTimeout(function() {
-                    getFlowerStatus();
-                }, 3000);
+                    // After send the request, get a new status after 3 sec.
+                    setTimeout(function() {
+                        getFlowerStatus();
+                    }, 3000);
 
-                flower_status.innerHTML = "Flower server starting.";
-            } else {
-                flower_status.innerHTML = "Flower server is already running.";
-            }
-        })
-        .catch(error => {
-            //
-            flower_status.innerHTML = error.message;
-        });
+                    flower_status.innerHTML = "Flower server starting.";
+                } else {
+                    flower_status.innerHTML = "Flower server is already running.";
+                }
+            })
+            .catch(error => {
+                //
+                flower_status.innerHTML = error.message;
+            });
     }
 
 </script>

@@ -48,6 +48,7 @@ status = {'isRunning': False,
           'num_rounds': 5,
           'batch_size': 32,
           'local_epochs': 10,
+          'server_upload_directory': '',
           'algorithm_name': 'FedAvg',
           'algorithm_params': {}}
 
@@ -125,6 +126,7 @@ def run_flower():
             _min_available_clients: int = int(request.form['min_available_clients'])
             _batch_size: int = int(request.form['batch_size'])
             _local_epochs: int = int(request.form['local_epochs'])
+            _server_upload_directory = request.form['server_upload_directory']
             _algorithm_name = request.form['algorithm_name']
             _algorithm_params = request.form['algorithm_params']
 
@@ -138,6 +140,7 @@ def run_flower():
                       'batch_size': _batch_size,
                       'local_epochs': _local_epochs,
                       'num_rounds': _num_rounds,
+                      'server_upload_directory': _server_upload_directory,
                       'algorithm_name': _algorithm_name,
                       'algorithm_params': _algorithm_params}
 
@@ -193,7 +196,7 @@ def run_flower():
                 return jsonify(status="fail", reason=f"Invalid aggregation_method received: {_algorithm_name}")
 
             # Start Flower server execution
-            start(strategy, _num_rounds)
+            start(strategy, _num_rounds, _server_upload_directory)
 
         except Exception as e:
             log(f"Flower start failed!! Exception: {e}")
@@ -208,7 +211,7 @@ def run_flower():
 # Start server.
 #
 #####
-def start(strategy, _num_rounds):
+def start(strategy, _num_rounds, server_upload_directory):
     global flower_process
     log(f"===## Starting Flower Server\n                      with parameters: {status}")
 
@@ -221,7 +224,7 @@ def start(strategy, _num_rounds):
     # wait for the process to finish
     flower_process.join()
 
-    send_result(strategy)
+    send_result(strategy, server_upload_directory)
 
     log("===## FLOWER SERVER is now disabled ##===")
 
@@ -229,7 +232,7 @@ def start(strategy, _num_rounds):
 # Start server.
 #
 #####
-def send_result(strategy):
+def send_result(strategy, server_upload_directory):
     # Upload will only be execution when strategy class has the 'get_result_file' function.
     try:
         callable(strategy.get_result_file)
@@ -241,7 +244,7 @@ def send_result(strategy):
     if server_port == '8072':
         url_port = 8070
     elif server_port == '8082':
-        url_port = 8090
+        url_port = 8080
     else:
         log(f'Failed to upload result. Unknown web server port based on {server_port} port')
         return
@@ -259,7 +262,7 @@ def send_result(strategy):
     directory = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + strategy_name
 
     # Post the file
-    post_request(url, directory, file_path)
+    post_request(url, server_upload_directory, file_path)
 
 ######
 # function used to run flower server process.

@@ -1,5 +1,5 @@
 // Post on Flower Server
-function postOnFlowerServer(api_path) {
+function postOnFlowerServer(api_path, server_upload_directory = "") {
   var form = new FormData();
   var req = new XMLHttpRequest();
 
@@ -15,6 +15,7 @@ function postOnFlowerServer(api_path) {
   form.append("num_rounds", num_rounds.value);
   form.append("algorithm_name", algorithms_select.options[algorithms_select.selectedIndex].text);
   form.append("algorithm_params", algorithms_select.value);
+  form.append("server_upload_directory", server_upload_directory);
 
   req.onreadystatechange = function() {
       if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
