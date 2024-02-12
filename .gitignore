@@ -7,8 +7,8 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-server/__pycache__/
-server/log.txt
+flower/__pycache__/
+flower/log.txt
 web/log.out
 web/uploads/
 
