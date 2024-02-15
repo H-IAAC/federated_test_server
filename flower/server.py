@@ -11,7 +11,7 @@ from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
 import multiprocessing
-from datetime import datetime
+import datetime;
 
 from Utils import log, check_log_size, read_log, post_request
 from DEEV_Strategy import DEEV_Strategy
@@ -50,7 +50,9 @@ status = {'isRunning': False,
           'local_epochs': 10,
           'server_upload_directory': '',
           'algorithm_name': 'FedAvg',
-          'algorithm_params': {}}
+          'algorithm_params': {},
+          'start_timestamp': '',
+          'stop_timestamp': '',}
 
 ######
 # Display the log file when accessing the '/' path.
@@ -99,6 +101,8 @@ def stop_flower():
     except Exception as e:
         log(f"FLOWER SERVER failed to stop: {e}")
         return jsonify(status="fail", reason=f"Flower server failed to stop: {e}.")
+    finally:
+        status["stop_timestamp"] = datetime.datetime.now()
 
     return jsonify(status="success", reason=f"Flower server has stop.")
 
@@ -142,7 +146,9 @@ def run_flower():
                       'num_rounds': _num_rounds,
                       'server_upload_directory': _server_upload_directory,
                       'algorithm_name': _algorithm_name,
-                      'algorithm_params': _algorithm_params}
+                      'algorithm_params': _algorithm_params,
+                      'start_timestamp': datetime.datetime.now(),
+                      'stop_timestamp': ''}
 
 
             # Strategy - FedAvg
@@ -203,6 +209,7 @@ def run_flower():
             return jsonify(status="fail", reason=f"Flower start failed!! Exception: {e}.")
 
         finally:
+            status["stop_timestamp"] = datetime.datetime.now()
             status['isRunning'] = False
 
     return jsonify(status="success", reason=f"{_algorithm_name} execution finished.")
@@ -251,15 +258,8 @@ def send_result(strategy, server_upload_directory):
 
     url = f'http://vm.hiaac.ic.unicamp.br:{url_port}/upload'
 
-    strategy_name = strategy.__class__.__name__
-    if hasattr(strategy, '__name__'):
-        strategy_name = strategy.__name__
-
     # Get the path to the file to be uploaded
     file_path = strategy.get_result_file()
-
-    # Define the directory name in the server
-    directory = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + strategy_name
 
     # Post the file
     post_request(url, server_upload_directory, file_path)

@@ -180,7 +180,7 @@ app.post("/upload", function (req, res) {
     // Parse form content
     form.parse(req, async function (err, fields, files) {
         if (!files.file || !files.file.filepath) {
-            console.log(getDateTime() + " Missing files parameters, not file received.");
+            console.log(utils.getDateTime() + " Missing files parameters, not file received.");
             return;
         }
             
@@ -196,7 +196,7 @@ app.post("/upload", function (req, res) {
             newPath = path.join(__dirname, 'uploads');
         }
 
-        console.log(getDateTime() + " New upload request to [" + fields.directory + "] [" + files.file.originalFilename + "] success.");
+        console.log(utils.getDateTime() + " New upload request to [" + fields.directory + "] [" + files.file.originalFilename + "] success.");
 
         // Create the directory when files will be stored
         if (!fs.existsSync(newPath)) {
@@ -208,7 +208,7 @@ app.post("/upload", function (req, res) {
 
         if (fields.ignore && fields.ignore !== "false") {
             if (fs.existsSync(newPath)) {
-                console.log(getDateTime() + " Ignoring file [" + newPath + "] as it already exists");
+                console.log(utils.getDateTime() + " Ignoring file [" + newPath + "] as it already exists");
                 res.json({ status: "success" });
                 return;
             }
@@ -218,14 +218,12 @@ app.post("/upload", function (req, res) {
         try {
             fs.renameSync(oldPath, newPath);
             res.json({ status: "success" });
-            console.log(getDateTime() + " Uploading to [" + newPath + "] success.");
+            console.log(utils.getDateTime() + " Uploading to [" + newPath + "] success.");
         } catch (ex) {
-            console.log(getDateTime() + " Uploading to [" + newPath + "] failed. " + ex.toString());
+            console.log(utils.getDateTime() + " Uploading to [" + newPath + "] failed. " + ex.toString());
             res.json({ status: "error: " + ex.toString() });
         }
     });
 });
 
-function getDateTime() {
-    return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-}
+

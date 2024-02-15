@@ -18,10 +18,9 @@ module.exports = {
     },
 
     /**
-     * @return string           Return current timestamp
+     * @return string           Return timestamp used in the log output
      */
-    get_timestamp: function () {
-        const now  =  new Date();
-        return date.format(now,'YYYYMMDD_HHmmss');
+    getDateTime : function () {
+        return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
     }
 }
