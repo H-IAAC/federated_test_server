@@ -25,14 +25,14 @@
             "name": "server 8080",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/server/server.py",
+            "program": "${workspaceFolder}/flower/server.py",
             "args" : ["--port", "8082", "--flower_port", "8083"]
         },
         {
             "name": "server 8070",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/server/server.py",
+            "program": "${workspaceFolder}/flower/server.py",
             "args" : ["--port", "8072", "--flower_port", "8073"]
         }       
     ]
