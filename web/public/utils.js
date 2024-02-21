@@ -15,3 +15,8 @@ function getTimestamp() {
 function displayMessage(message) {
     flower_status.innerHTML = message;
 }
+
+function convertTimeFormat(date) {
+    var m = moment(date, 'ddd, DD MMM YYYY HH:mm:ss');
+    return m.format('DD/MM/YYYY HH:mm:ss');
+}

@@ -1,9 +1,9 @@
 function stopServer() {
-    sendPost('/stop');
+    postReq('/stop');
 }
 
 function startServer() {
-    fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
+    fetch(flower_endpoint + '/status')
         .then(function(response) {
             return response.json();
         })
@@ -13,7 +13,7 @@ function startServer() {
                 let server_upload_directory = setConfiguration();
 
                 // Call api to start flower execution
-                sendPost('/run', server_upload_directory);
+                postReq('/run', server_upload_directory);
 
                 getStatus();
             } else {
@@ -26,7 +26,7 @@ function startServer() {
 }
 
 function getStatus() {
-    fetch('http://' + flower_url.value + ":" + flower_api_port.value + '/status')
+    fetch(flower_endpoint + '/status')
         .then(function(response) {
             return response.json();
         })
@@ -42,6 +42,11 @@ function getStatus() {
             batch_size.value = data.batch_size;
             local_epochs.value = data.local_epochs;
             num_rounds.value = data.num_rounds;
+
+            if (!data.stop_timestamp)
+                flower_server_execution_time.innerHTML = "Since: " + convertTimeFormat(data.start_timestamp);
+            else
+                flower_server_execution_time.innerHTML = "Last run: " + convertTimeFormat(data.start_timestamp) + " ~ " + convertTimeFormat(data.stop_timestamp);
         })
         .catch(error => {
             displayMessage(error.message);
@@ -51,11 +56,11 @@ function getStatus() {
 /**
  * Post request to Flower Server
  */
-function sendPost(api_path, server_upload_directory = "") {
+function postReq(api_path, server_upload_directory = "") {
     var form = new FormData();
     var req = new XMLHttpRequest();
 
-    req.open("POST", 'http://' + flower_url.value + ":" + flower_api_port.value + api_path, true);
+    req.open("POST", flower_endpoint + '/' + api_path, true);
 
     form.append("fraction_fit", fraction_fit.value);
     form.append("fraction_eval", fraction_eval.value);

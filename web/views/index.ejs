@@ -9,6 +9,8 @@
     <script src="/config.js"></script>
     <script src="/utils.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.3/moment-with-locales.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.3/moment.min.js"></script>
 </head>
 
 <body>
@@ -135,6 +137,8 @@
                     <button onclick="goToLogs()">Logs</button>
                 </div>
                 <label id="flower_server_response">---</label>
+                <br>
+                <label id="flower_server_execution_time">---</label>
             </div>
         </div>
     </div>
@@ -184,12 +188,15 @@
     var local_epochs = $('#local_epochs')[0];
     var num_rounds = $('#num_rounds')[0];
     var flower_status = $('#flower_server_response')[0];
+    var flower_server_execution_time = $('#flower_server_execution_time')[0];
     var algorithms_select = $('#algorithms_select')[0];
     var algorithms_params_div = $('#grid-algorithms_params')[0];
 
     flower_url.value = "<%= flower_server %>";
     flower_port.value = "<%= flower_port %>";
     flower_api_port.value = "<%= flower_api_port %>";
+
+    var flower_endpoint = 'http://' + flower_url.value + ':' + flower_api_port.value;
 
     // Get the initial value for 'fold' (defined on index.js)
     var fold = document.getElementById("fold");
