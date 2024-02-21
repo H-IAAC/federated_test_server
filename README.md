@@ -19,7 +19,7 @@ Stop: ./run.sh stop
 
 **Set environment:**\
 ` conda create -n flower-3.10.12 python=3.10.12`\
-` poetry run pip install`\
+` poetry install`\
 ` poetry run python3 server.py`
 
 **How To:**\
