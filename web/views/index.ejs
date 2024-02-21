@@ -4,9 +4,13 @@
     <title>H-IAAC - Federated Test</title>
     <link href="https://fonts.googleapis.com/css?family=Lato:100" rel="stylesheet">
     <link href="/styles.css" rel="stylesheet">
+    <script src="/flower/flower.js"></script>
     <script src="/api.js"></script>
     <script src="/config.js"></script>
+    <script src="/utils.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.3/moment-with-locales.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.3/moment.min.js"></script>
 </head>
 
 <body>
@@ -52,7 +56,7 @@
                         <input type="text" id="flower_port" title="Default values: Prod 8083 and Test 8073">
                     </div>
                     <div class="grid-child">
-                        <label>Flower API port:</label>
+                        <label>Server API port:</label>
                     </div>
                     <div class="grid-child">
                         <input type="text" id="flower_api_port" title="Default values: Prod 8082 and Test 8072">
@@ -117,7 +121,7 @@
 
                 <div class="grid-select">
                     <label>Client Selection:</label>
-                    <select id="algorithms_select" onchange="onAlgorithmSelected()">
+                    <select id="algorithms_select" onchange="onClientSelectionChanged()">
                     </select>
                 </div>
 
@@ -127,12 +131,14 @@
                 </div>
 
                 <div>
-                    <button onclick="startFlowerServer()">Start</button>
-                    <button onclick="stopFlowerServer()">Stop</button>
-                    <button onclick="getFlowerStatus()">Refresh</button>
+                    <button onclick="startServer()">Start</button>
+                    <button onclick="stopServer()">Stop</button>
+                    <button onclick="getStatus()">Refresh</button>
                     <button onclick="goToLogs()">Logs</button>
                 </div>
                 <label id="flower_server_response">---</label>
+                <br>
+                <label id="flower_server_execution_time">---</label>
             </div>
         </div>
     </div>
@@ -170,7 +176,6 @@
 </body>
 
 <script type="text/javascript">
-
     var flower_url = $('#flower_address')[0];
     var flower_port = $('#flower_port')[0];
     var flower_api_port = $('#flower_api_port')[0];
@@ -183,12 +188,15 @@
     var local_epochs = $('#local_epochs')[0];
     var num_rounds = $('#num_rounds')[0];
     var flower_status = $('#flower_server_response')[0];
+    var flower_server_execution_time = $('#flower_server_execution_time')[0];
     var algorithms_select = $('#algorithms_select')[0];
     var algorithms_params_div = $('#grid-algorithms_params')[0];
 
     flower_url.value = "<%= flower_server %>";
     flower_port.value = "<%= flower_port %>";
     flower_api_port.value = "<%= flower_api_port %>";
+
+    var flower_endpoint = 'http://' + flower_url.value + ':' + flower_api_port.value;
 
     // Get the initial value for 'fold' (defined on index.js)
     var fold = document.getElementById("fold");
@@ -230,11 +238,14 @@
         }
     }
 
-    // Get status from Flower server, to update UI with information if the server is running or not
-    getFlowerStatus();
+    // When page is loaded, get status from Flower server, to update UI with information/status
+    // from flower server.
+    getStatus();
 
-    // Update options based on the selected algorithm
-    function onAlgorithmSelected() {
+    /**
+     * When the selection option changes, then update options based on the selected algorithm.
+     */
+    function onClientSelectionChanged() {
         let config_json = JSON.parse(algorithms_select.value);
 
         remove(algorithms_params_div);
@@ -244,45 +255,15 @@
         });
     }
 
-    // Send configuration parameters to the server
-    function setConfiguration() {
-        // Get values from algorithm options
-        let current_algorithm_config = get(JSON.parse(algorithms_select.value));
-
-        post('/setConfig/', { fold: fold.value,
-                              flower_url: flower_url.value,
-                              flower_port: flower_port.value,
-                              flower_api_port: flower_api_port.value,
-                              algorithm_name: algorithms_select.options[algorithms_select.selectedIndex].text,
-                              algorithm_params: JSON.stringify(current_algorithm_config) });
-    }
-
+    /**
+     * Open the log page 
+     */
     function goToLogs() {
         if (flower_url.value)
             window.open("http://" + flower_url.value + ":" + flower_api_port.value, "_blank");
         else
-            flower_status.innerHTML = "Missing flower address.";
-    }
-
-    function stopFlowerServer() {
-        postOnFlowerServer('/stop');
-    }
-
-    function startFlowerServer() {
-        // Save parameters from this execution
-        setConfiguration();
-
-        // Call api to start flower execution
-        postOnFlowerServer('/run');
-
-        // After send the request, get a new status after 3 sec.
-        setTimeout(function() {
-            getFlowerStatus();
-        }, 3000);
-
-        flower_status.innerHTML = "Flower server starting.";
+            displayMessage("Missing flower address.");
     }
 
 </script>
-
 </html>

@@ -25,6 +25,7 @@ var flower_port = '8083';
 var flower_api_port = '8082';
 var algorithm_name = 'FedAvg';
 var algorithm_params = '{}';
+var server_directory = '';
 
 // parse command line args
 const args = process.argv.slice(2);
@@ -79,6 +80,7 @@ app.listen(serverPort, function () {
  * Change the 'fold' value returned on 'getConfig'
  */
 app.post("/setConfig", function (req, res) {
+    server_directory = req.body.server_directory;
     fold = req.body.fold;
     flower_server = req.body.flower_url;
     flower_port = req.body.flower_port;
@@ -122,12 +124,15 @@ app.get("/getDevices", function (req, res) {
  */
 app.get("/getConfig", function (req, res) {
     client++;
-    res.json({ fold: fold, client: client,
+
+    res.json({ fold: fold,
+               client: client,
                flower_server: flower_server,
                flower_port: flower_port,
                flower_api_port: flower_api_port,
+               server_directory: server_directory,
                algorithm_name: algorithm_name,          // algorithm name, selected by the user
-               algorithm_params: algorithm_params});    // the algorithm entered by the user
+               algorithm_params: algorithm_params});    // the algorithm params entered by the user
 });
 
 /**
@@ -175,7 +180,7 @@ app.post("/upload", function (req, res) {
     // Parse form content
     form.parse(req, async function (err, fields, files) {
         if (!files.file || !files.file.filepath) {
-            console.log(getDateTime() + " Missing files parameters, not file received.");
+            console.log(utils.getDateTime() + " Missing files parameters, not file received.");
             return;
         }
             
@@ -191,7 +196,7 @@ app.post("/upload", function (req, res) {
             newPath = path.join(__dirname, 'uploads');
         }
 
-        console.log(getDateTime() + " New upload request to [" + fields.directory + "] [" + files.file.originalFilename + "] success.");
+        console.log(utils.getDateTime() + " New upload request to [" + fields.directory + "] [" + files.file.originalFilename + "] success.");
 
         // Create the directory when files will be stored
         if (!fs.existsSync(newPath)) {
@@ -203,7 +208,7 @@ app.post("/upload", function (req, res) {
 
         if (fields.ignore && fields.ignore !== "false") {
             if (fs.existsSync(newPath)) {
-                console.log(getDateTime() + " Ignoring file [" + newPath + "] as it already exists");
+                console.log(utils.getDateTime() + " Ignoring file [" + newPath + "] as it already exists");
                 res.json({ status: "success" });
                 return;
             }
@@ -213,14 +218,12 @@ app.post("/upload", function (req, res) {
         try {
             fs.renameSync(oldPath, newPath);
             res.json({ status: "success" });
-            console.log(getDateTime() + " Uploading to [" + newPath + "] success.");
+            console.log(utils.getDateTime() + " Uploading to [" + newPath + "] success.");
         } catch (ex) {
-            console.log(getDateTime() + " Uploading to [" + newPath + "] failed. " + ex.toString());
+            console.log(utils.getDateTime() + " Uploading to [" + newPath + "] failed. " + ex.toString());
             res.json({ status: "error: " + ex.toString() });
         }
     });
 });
 
-function getDateTime() {
-    return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-}
+

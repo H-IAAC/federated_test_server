@@ -1,22 +1,34 @@
+
 # H-IAAC - Federated Test
 
-*Web:*
-`     Check requirements:`
-`     node v18.12.1`
-`     npm v8.19.2`
-`     `
-`     Steps:`
-`     npm install`
-`     ./run.sh start <port eg. 8080>`
-`     `
-*Server:*
-`     Setup environment:`
-`     conda create -n flower-0.18 python=3.9`
-`     conda create -n flower-3.10.12 python=3.10.12`
-`     `
-`     Poetry:`
-`     poetry run pip install`
-`     poetry run python3 server.py`
+## Web
+**Requirements:**\
+`node v19.8.1`\
+`npm v9.5.1`
 
-![Diagram](docs/diagram.drawio.png)
-<a href="https://app.diagrams.net/#HH-IAAC%2Ffederated_test_server%2Fdev%2Fdocs/diagram.drawio.png" target="_blank">Edit in diagrams.net</a>
+**How To:**\
+Start: ./run.sh start <port>\
+Stop: ./run.sh stop
+
+## Flower:
+
+**Requirements:**\
+`flower-0.18`\
+`python=3.9`\
+`poetry=1.3.2`
+
+**Set environment:**\
+` conda create -n flower-3.10.12 python=3.10.12`\
+` poetry install`\
+` poetry run python3 server.py`
+
+**How To:**\
+Start: ./run.sh start <web_server_port> <flower_server_port>\
+Stop: ./run.sh stop
+
+
+## Architecture
+
+![image](https://github.com/H-IAAC/federated_test_server/assets/117912051/792effab-f8cd-44b6-8da6-6a0899634ae6)
+
+

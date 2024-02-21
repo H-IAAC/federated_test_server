@@ -11,8 +11,9 @@ from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
 import multiprocessing
+import datetime;
 
-from Utils import log, check_log_size, read_log
+from Utils import log, check_log_size, read_log, post_request
 from DEEV_Strategy import DEEV_Strategy
 
 log(f"flwr: {fl.__version__}")
@@ -47,8 +48,11 @@ status = {'isRunning': False,
           'num_rounds': 5,
           'batch_size': 32,
           'local_epochs': 10,
+          'server_upload_directory': '',
           'algorithm_name': 'FedAvg',
-          'algorithm_params': {}}
+          'algorithm_params': {},
+          'start_timestamp': '',
+          'stop_timestamp': '',}
 
 ######
 # Display the log file when accessing the '/' path.
@@ -97,6 +101,8 @@ def stop_flower():
     except Exception as e:
         log(f"FLOWER SERVER failed to stop: {e}")
         return jsonify(status="fail", reason=f"Flower server failed to stop: {e}.")
+    finally:
+        status["stop_timestamp"] = datetime.datetime.now()
 
     return jsonify(status="success", reason=f"Flower server has stop.")
 
@@ -124,6 +130,7 @@ def run_flower():
             _min_available_clients: int = int(request.form['min_available_clients'])
             _batch_size: int = int(request.form['batch_size'])
             _local_epochs: int = int(request.form['local_epochs'])
+            _server_upload_directory = request.form['server_upload_directory']
             _algorithm_name = request.form['algorithm_name']
             _algorithm_params = request.form['algorithm_params']
 
@@ -137,8 +144,11 @@ def run_flower():
                       'batch_size': _batch_size,
                       'local_epochs': _local_epochs,
                       'num_rounds': _num_rounds,
+                      'server_upload_directory': _server_upload_directory,
                       'algorithm_name': _algorithm_name,
-                      'algorithm_params': _algorithm_params}
+                      'algorithm_params': _algorithm_params,
+                      'start_timestamp': datetime.datetime.now(),
+                      'stop_timestamp': ''}
 
 
             # Strategy - FedAvg
@@ -166,7 +176,7 @@ def run_flower():
                 log(f"DEEV decay: {decay} perc_of_clients {perc_of_clients}")
 
                 # Create DEEV strategy
-                strategy =  DEEV_Strategy(_algorithm_name, 
+                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
                                           fraction_fit=_fraction_fit,
                                           fraction_eval=_fraction_eval,
                                           min_fit_clients=int(_min_fit_clients),
@@ -174,9 +184,10 @@ def run_flower():
                                           min_available_clients=int(_min_available_clients),
                                           eval_fn=None,
                                           initial_parameters=None,
-                                          on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs },
                                           decay=float(decay),
-                                          perc_of_clients=float(perc_of_clients)
+                                          perc_of_clients=float(perc_of_clients),
+                                          local_epochs = _local_epochs, 
+                                          batch_size = _batch_size
                                           #dataset            = os.environ['DATASET'],
                                           #model_name         = os.environ['MODEL'])
                                         )
@@ -191,13 +202,14 @@ def run_flower():
                 return jsonify(status="fail", reason=f"Invalid aggregation_method received: {_algorithm_name}")
 
             # Start Flower server execution
-            start(strategy, _num_rounds)
+            start(strategy, _num_rounds, _server_upload_directory)
 
         except Exception as e:
             log(f"Flower start failed!! Exception: {e}")
             return jsonify(status="fail", reason=f"Flower start failed!! Exception: {e}.")
 
         finally:
+            status["stop_timestamp"] = datetime.datetime.now()
             status['isRunning'] = False
 
     return jsonify(status="success", reason=f"{_algorithm_name} execution finished.")
@@ -206,7 +218,7 @@ def run_flower():
 # Start server.
 #
 #####
-def start(strategy, _num_rounds):
+def start(strategy, _num_rounds, server_upload_directory):
     global flower_process
     log(f"===## Starting Flower Server\n                      with parameters: {status}")
 
@@ -219,19 +231,47 @@ def start(strategy, _num_rounds):
     # wait for the process to finish
     flower_process.join()
 
+    send_result(strategy, server_upload_directory)
+
     log("===## FLOWER SERVER is now disabled ##===")
+
+######
+# Start server.
+#
+#####
+def send_result(strategy, server_upload_directory):
+    # Upload will only be execution when strategy class has the 'get_result_file' function.
+    try:
+        callable(strategy.get_result_file)
+    except:
+        log(f'Uploading result ignore!. The selected strategy {strategy.__class__.__name__} is missing the get_result_file() function.')
+        return
+
+    # Determine the port from server
+    if server_port == '8072':
+        url_port = 8070
+    elif server_port == '8082':
+        url_port = 8080
+    else:
+        log(f'Failed to upload result. Unknown web server port based on {server_port} port')
+        return
+
+    url = f'http://vm.hiaac.ic.unicamp.br:{url_port}/upload'
+
+    # Get the path to the file to be uploaded
+    file_path = strategy.get_result_file()
+
+    # Post the file
+    post_request(url, server_upload_directory, file_path)
 
 ######
 # function used to run flower server process.
 #
 #####
 def flower_server(strategy, _num_rounds):
-    # Start Flower server for 10 rounds of federated learning
-    log(f"Flower server started on port: {flower_server_port}")
     fl.server.start_server(
         server_address=f"0.0.0.0:{flower_server_port}",
         config={"num_rounds": _num_rounds},
-        #config=fl.server.ServerConfig(num_rounds=int(_num_rounds)),
         strategy=strategy,
     )
 

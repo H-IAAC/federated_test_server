@@ -1,19 +1,12 @@
 import flwr as fl
 import numpy as np
+import os
+import csv
 import math
-import os
-import time
-import os
-import flwr as fl
-import tensorflow
-import grpc
-import google.protobuf
-import flatbuffers
-import json
-import argparse
-import multiprocessing
 
 from Utils import log, check_log_size, read_log
+
+from server_utils import sample
 
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
@@ -34,8 +27,10 @@ from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.common.logger import log
 
 class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
-    def __init__(self, aggregation_method, fraction_fit, fraction_eval, min_fit_clients, min_eval_clients, min_available_clients, eval_fn, initial_parameters, on_fit_config_fn, decay, perc_of_clients):
+    def __init__(self, aggregation_method, fraction_fit, fraction_eval, min_fit_clients, min_eval_clients, min_available_clients, eval_fn, initial_parameters, decay, perc_of_clients, local_epochs, batch_size):
         print(f"DEEV_Strategy init")
+
+        self.__name__ = 'DEEV'
 
         self.aggregation_method = aggregation_method
         self.num_clients        = min_available_clients
@@ -55,12 +50,14 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         #self.dataset    = dataset
         #self.model_name = model_name
 
+        self.local_epochs = local_epochs
+        self.batch_size   = batch_size
+
         #POC
         self.perc_of_clients  = perc_of_clients
 
         #FedLTA
         self.decay_factor = decay
-
 
         super().__init__()
 
@@ -84,7 +81,17 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         self.eval_fn=eval_fn
 
         self.initial_parameters = initial_parameters
-        self.on_fit_config_fn = on_fit_config_fn
+
+        # Dictionary of type cid:accuracy
+        self.clients = {}
+
+        # define csv path
+        self.csv_path = f'{os.sep}tmp{os.sep}selected_clientes.csv'
+        if os.path.exists(self.csv_path):
+            os.remove(self.csv_path)
+
+        with open(self.csv_path, 'w', encoding='UTF8') as f:
+            csv.writer(f, quoting=csv.QUOTE_ALL).writerow(['round','clients'])
 
     ###### Referent to original code from version 0.18.0
     #def configure_fit(
@@ -110,25 +117,28 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
     def configure_fit(self, rnd, parameters, client_manager):
         """Configure the next round of training."""
-        if self.aggregation_method == 'POC':
-            clients2select        = int(float(self.num_clients) * float(self.perc_of_clients))
-            self.selected_clients = self.list_of_clients[:clients2select]
+        self.selected_clients = self.select_clients_bellow_average(self.average_accuracy)
 
-        elif self.aggregation_method == 'DEEV':
-            self.selected_clients = self.select_clients_bellow_average()
+        if self.decay_factor > 0:
+            the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
+            self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
 
-            if self.decay_factor > 0:
-                the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(rnd)
-                self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
+        print(f"Round {rnd}\tNumber of selected clients = {len(self.selected_clients)}")
 
-        config = {}
-        if self.on_fit_config_fn is not None:
-            # Custom fit config function provided
-            config = self.on_fit_config_fn(rnd)
+        with open(self.csv_path, 'a', encoding='UTF8') as f:
+            data = [rnd] + self.selected_clients
+            csv.writer(f, quoting=csv.QUOTE_ALL).writerow(data)
+
+        self.clients_last_round = self.selected_clients
+        
+        config = {
+            "selected_clients" : ' '.join(self.selected_clients),
+            "round"            : rnd,
+            "batch_size"       : self.batch_size, 
+            "local_epochs"     : self.local_epochs
+            }
 
         fit_ins = FitIns(parameters, config)
-
-        #self.clients_last_round = self.selected_clients
 
         # Sample clients
         sample_size, min_num_clients = self.num_fit_clients(
@@ -140,7 +150,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
 
         # Return client/config pairs
         return [(client, fit_ins) for client in clients]
-
 
 
     ###### Referent to original code from version 0.18.0
@@ -220,8 +229,6 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def aggregate_fit(self, rnd: int, results: List[Tuple[ClientProxy, FitRes]], failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
 
-        print(f"aggregate_fit")
-
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -234,14 +241,13 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
             for client, fit_res in results
         ]
 
-        print(f'LEN AGGREGATED PARAMETERS: {len(weights_results)}')
         #parameters_aggregated = weights_to_parameters(aggregate(weights_results))
 
         # Aggregate custom metrics if aggregation fn was provided
-        #metrics_aggregated = {}
+        metrics_aggregated = {}
 
         #return parameters_aggregated, metrics_aggregated
-        return self.weights_to_parameters(aggregate(weights_results)), {}
+        return self.weights_to_parameters(aggregate(weights_results)), metrics_aggregated
 
     ###### Referent to original code from version 0.18.0
     #def aggregate_evaluate(
@@ -276,50 +282,49 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
 
         if not results:
+            print(f"aggregate_evaluate no 'results', returning...")
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
         if not self.accept_failures and failures:
+            print(f"aggregate_evaluate there are failures, returning...")            
             return None, {}
 
-        #local_list_clients      = []
-        #self.list_of_clients    = []
-        #self.list_of_accuracies = []
-        #accs                    = []
-        
-        #for response in results:
-        #    client_id       = response[1].metrics['cid']
-        #    client_accuracy = float(response[1].metrics['accuracy'])
-        #    client_trans    = float(response[1].metrics['transmittion_prob'])
-        #    client_cputime  = float(response[1].metrics['cpu_cost'])
-        #    client_battery  = float(response[1].metrics['battery'])
+        accs = []
+        self.acc = []
+        clients = {}
 
-        #    filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/pareto.csv"
-        #    os.makedirs(os.path.dirname(filename), exist_ok=True)
+        for response in results:
+            client_id       = response[0].cid
+            client_accuracy = float(response[1].metrics['Accuracy'])
+            #client_trans    = float(response[1].metrics['transmittion_prob'])
+            #client_cputime  = float(response[1].metrics['cpu_cost'])
+            #client_battery  = float(response[1].metrics['battery'])
+            #filename = f"logs/{self.solution_name}/pareto.csv"
+            #os.makedirs(os.path.dirname(filename), exist_ok=True)
+    
+            #with open(filename, 'a') as pareto_file:
+                #pareto_file.write(f"{server_round}, {client_id}, {client_accuracy}, {client_trans}, {client_cputime}, {client_battery}\n")
+    
+            accs.append(client_accuracy)
+    
+            clients[client_id] = client_accuracy
+    
+        self.clients = dict(sorted(clients.items(), key=lambda item: item[1]))
 
-        #    with open(filename, 'a') as pareto_file:
-        #        pareto_file.write(f"{rnd}, {client_id}, {client_accuracy}, {client_trans}, {client_cputime}, {client_battery}\n")
+        self.acc = accs.copy()
 
-        #    accs.append(client_accuracy)
-
-        #    local_list_clients.append((client_id, client_accuracy))
-
-        #local_list_clients.sort(key=lambda x: x[1])
-
-        #self.list_of_clients    = [str(client[0]) for client in local_list_clients]
-        #self.list_of_accuracies = [float(client[1]) for client in local_list_clients]
-
-        #accs.sort()
-        #self.average_accuracy   = np.mean(accs)
+        accs.sort()
+        self.average_accuracy = np.mean(accs)
 
         # Weigh accuracy of each client by number of examples used
-        #accuracies = [r.metrics["accuracy"] * r.num_examples for _, r in results]
-        #examples   = [r.num_examples for _, r in results]
+        accuracies = [float(r.metrics["Accuracy"]) * r.num_examples for _, r in results]
+        examples   = [r.num_examples for _, r in results]
 
         # Aggregate and print custom metric
-        #accuracy_aggregated = sum(accuracies) / sum(examples)
-        #current_accuracy    = accuracy_aggregated
+        accuracy_aggregated = sum(accuracies) / sum(examples)
+        current_accuracy    = accuracy_aggregated
 
-        #print(f"Round {rnd} accuracy aggregated from client results: {accuracy_aggregated}")
+        print(f"Round {rnd} accuracy aggregated from client results: {accuracy_aggregated}")
 
         # Aggregate loss
         loss_aggregated = weighted_loss_avg(
@@ -334,32 +339,29 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
         )
 
         # Aggregate custom metrics if aggregation fn was provided
-        #top5 = np.mean(accs[-5:])
-        #top1 = accs[-1]
+        top5 = np.mean(accs[-5:])
+        top1 = accs[-1]
 
         #filename = f"logs/{self.dataset}/{self.solution_name}/{self.model_name}/server.csv"
         #os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         #with open(filename, 'a') as server_log_file:
-        #    server_log_file.write(f"{time.time()}, {rnd}, {accuracy_aggregated}, {top5}, {top1}\n")
+        #    server_log_file.write(f"{time.time()}, {server_round}, {accuracy_aggregated}, {top5}, {top1}\n")
 
-        #metrics_aggregated = { 
-        #    "accuracy"  : accuracy_aggregated,
-        #    "top-5"     : top5,
-        #    "top-1"     : top1
-        #}
-
+        metrics_aggregated = { 
+            "accuracy"  : accuracy_aggregated,
+            "top-5"     : top5,
+            "top-1"     : top1
+        }
     
-        #return loss_aggregated, metrics_aggregated
-        return loss_aggregated, {}
+        return loss_aggregated, metrics_aggregated
 
-    def select_clients_bellow_average(self):
+    def select_clients_bellow_average(self, average_accuracy):
         selected_clients = []
 
-        for idx_accuracy in range(len(self.list_of_accuracies)):
-
-            if self.list_of_accuracies[idx_accuracy] < self.average_accuracy:
-                selected_clients.append(self.list_of_clients[idx_accuracy])
+        for item in self.clients.items():
+            if item[1] < average_accuracy:
+                selected_clients.append(item[0])
 
         return selected_clients
 
@@ -371,3 +373,11 @@ class DEEV_Strategy(fl.server.strategy.FedAvgAndroid):
     def parameters_to_weights(self, parameters: Parameters) -> Weights:
         """Convert parameters object to NumPy weights."""
         return [self.bytes_to_ndarray(tensor) for tensor in parameters.tensors]
+
+    def get_result_file(self) -> str:
+        #temp_file = open("/tmp/temporary.txt", "w")
+        #temp_file.write('temporary to test flower DEEV execution.')
+        #temp_file.close()
+
+        # Return the path to the result file
+        return self.csv_path
