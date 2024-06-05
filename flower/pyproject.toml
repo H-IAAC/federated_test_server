@@ -1,7 +1,5 @@
 [build-system]
-requires = [
-	"poetry-core>=1.4.0"
-]
+requires = ["poetry-core>=1.4.0"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
@@ -11,16 +9,10 @@ description = "HAR federated learning using Flower"
 authors = ["H.IAAC - Hub of Artificial Intelligence and Cognitive Architectures - University of Campinas - <https://github.com/H-IAAC/federated_test_server>"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-flwr = "0.18.0"
-Werkzeug = "2.2.2"
-flask = "2.2.2"
+python = ">=3.10,<3.11"
+flwr = "1.8.0"
+grpcio = "1.64.0"
+tensorflow-cpu = { version = "2.14.0", markers = "platform_machine == \"x86_64\"" }
+flask = "^2.2.2"
 flask-cors = "3.0.10"
-grpcio = "1.43.0"
-tensorflow = "2.11"
-tensorflow-io-gcs-filesystem = "0.34.0"
-tensorboard = "2.11"
-requests = "2.31.0"
-
-[tool.poetry.dev-dependencies]
-jupyter = "^1.0.0"
+logging = "^0.4.9.6"

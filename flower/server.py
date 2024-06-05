@@ -10,11 +10,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 from multiprocessing import Process
 import logging
-import multiprocessing
 import datetime;
 
 from Utils import log, check_log_size, read_log, post_request
-from DEEV_Strategy import DEEV_Strategy
+#from DEEV_Strategy import DEEV_Strategy
 
 log(f"flwr: {fl.__version__}")
 log(f"tensorflow: {tensorflow.__version__}")
@@ -124,9 +123,9 @@ def run_flower():
         try:
             _num_rounds: int = int(request.form['num_rounds'])
             _fraction_fit: float = float(request.form['fraction_fit'])
-            _fraction_eval: float = float(request.form['fraction_eval'])
+            _fraction_evaluate: float = float(request.form['fraction_eval'])
             _min_fit_clients: int = int(request.form['min_fit_clients'])
-            _min_eval_clients: int = int(request.form['min_eval_clients'])
+            _min_evaluate_clients: int = int(request.form['min_eval_clients'])
             _min_available_clients: int = int(request.form['min_available_clients'])
             _batch_size: int = int(request.form['batch_size'])
             _local_epochs: int = int(request.form['local_epochs'])
@@ -134,12 +133,12 @@ def run_flower():
             _algorithm_name = request.form['algorithm_name']
             _algorithm_params = request.form['algorithm_params']
 
-            _eval_fn = None
+            _evaluate_fn = None
             # _initial_parameters = request.form['initial_parameters']
 
             status = {'isRunning': True,
-                      'fraction_fit': _fraction_fit, 'fraction_eval': _fraction_eval,
-                      'min_fit_clients': _min_fit_clients, 'min_eval_clients': _min_eval_clients,
+                      'fraction_fit': _fraction_fit, 'fraction_eval': _fraction_evaluate,
+                      'min_fit_clients': _min_fit_clients, 'min_eval_clients': _min_evaluate_clients,
                       'min_available_clients': _min_available_clients,
                       'batch_size': _batch_size,
                       'local_epochs': _local_epochs,
@@ -157,11 +156,11 @@ def run_flower():
                 # Create FedAvg strategy
                 strategy = fl.server.strategy.FedAvgAndroid(
                     fraction_fit=_fraction_fit,
-                    fraction_eval=_fraction_eval,
+                    fraction_evaluate=_fraction_evaluate,
                     min_fit_clients=_min_fit_clients,
-                    min_eval_clients=_min_eval_clients,
+                    min_evaluate_clients=_min_evaluate_clients,
                     min_available_clients=_min_available_clients,
-                    eval_fn=None,
+                    evaluate_fn=_evaluate_fn,
                     initial_parameters=None,
                     on_fit_config_fn=lambda server_round : { "batch_size": _batch_size, "local_epochs": _local_epochs })
 
@@ -176,21 +175,21 @@ def run_flower():
                 log(f"DEEV decay: {decay} perc_of_clients {perc_of_clients}")
 
                 # Create DEEV strategy
-                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
-                                          fraction_fit=_fraction_fit,
-                                          fraction_eval=_fraction_eval,
-                                          min_fit_clients=int(_min_fit_clients),
-                                          min_eval_clients=int(_min_eval_clients),
-                                          min_available_clients=int(_min_available_clients),
-                                          eval_fn=None,
-                                          initial_parameters=None,
-                                          decay=float(decay),
-                                          perc_of_clients=float(perc_of_clients),
-                                          local_epochs = _local_epochs, 
-                                          batch_size = _batch_size
+#                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
+#                                          fraction_fit=_fraction_fit,
+#                                          fraction_eval=_fraction_evaluate,
+#                                          min_fit_clients=int(_min_fit_clients),
+#                                          min_eval_clients=int(_min_evaluate_clients),
+#                                          min_available_clients=int(_min_available_clients),
+#                                          eval_fn=None,
+#                                          initial_parameters=None,
+#                                          decay=float(decay),
+#                                          perc_of_clients=float(perc_of_clients),
+#                                          local_epochs = _local_epochs, 
+#                                          batch_size = _batch_size
                                           #dataset            = os.environ['DATASET'],
                                           #model_name         = os.environ['MODEL'])
-                                        )
+#                                        )
 
             # Strategy - RAWCS
             elif _algorithm_name == 'rawcs':
@@ -271,7 +270,7 @@ def send_result(strategy, server_upload_directory):
 def flower_server(strategy, _num_rounds):
     fl.server.start_server(
         server_address=f"0.0.0.0:{flower_server_port}",
-        config={"num_rounds": _num_rounds},
+        config=fl.server.ServerConfig(num_rounds=_num_rounds),
         strategy=strategy,
     )
 
