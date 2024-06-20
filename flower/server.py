@@ -13,7 +13,7 @@ import logging
 import datetime;
 
 from Utils import log, check_log_size, read_log, post_request
-#from DEEV_Strategy import DEEV_Strategy
+from DEEV_Strategy import DEEV_Strategy
 
 log(f"flwr: {fl.__version__}")
 log(f"tensorflow: {tensorflow.__version__}")
@@ -149,7 +149,6 @@ def run_flower():
                       'start_timestamp': datetime.datetime.now(),
                       'stop_timestamp': ''}
 
-
             # Strategy - FedAvg
             if _algorithm_name == 'FedAvg':
                 log("  Using FedAvg strategy")
@@ -175,21 +174,19 @@ def run_flower():
                 log(f"DEEV decay: {decay} perc_of_clients {perc_of_clients}")
 
                 # Create DEEV strategy
-#                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
-#                                          fraction_fit=_fraction_fit,
-#                                          fraction_eval=_fraction_evaluate,
-#                                          min_fit_clients=int(_min_fit_clients),
-#                                          min_eval_clients=int(_min_evaluate_clients),
-#                                          min_available_clients=int(_min_available_clients),
-#                                          eval_fn=None,
-#                                          initial_parameters=None,
-#                                          decay=float(decay),
-#                                          perc_of_clients=float(perc_of_clients),
-#                                          local_epochs = _local_epochs, 
-#                                          batch_size = _batch_size
-                                          #dataset            = os.environ['DATASET'],
-                                          #model_name         = os.environ['MODEL'])
-#                                        )
+                strategy =  DEEV_Strategy(aggregation_method=_algorithm_name,
+                                          fraction_fit=_fraction_fit,
+                                          fraction_eval=_fraction_evaluate,
+                                          min_fit_clients=int(_min_fit_clients),
+                                          min_eval_clients=int(_min_evaluate_clients),
+                                          min_available_clients=int(_min_available_clients),
+                                          eval_fn=None,
+                                          initial_parameters=None,
+                                          decay=float(decay),
+                                          perc_of_clients=float(perc_of_clients),
+                                          local_epochs = _local_epochs, 
+                                          batch_size = _batch_size
+                                        )
 
             # Strategy - RAWCS
             elif _algorithm_name == 'rawcs':
